@@ -57,12 +57,12 @@ for page in range(2, 101):
     df_btc_wallets = df_btc_wallets.append(df_bottom)
 
 #Export to csv
-df_btc_wallets.to_csv('top_10000_btc_wallets.csv', index = False)
+df_btc_wallets.to_csv('wallets_uncleaned.csv', index = False)
 
 
 """Data Cleaning"""
 #df = df_btc_wallets
-df = pd.read_csv('top_10000_btc_wallets.csv')
+df = pd.read_csv('wallets_uncleaned.csv')
 
 def get_owner(address_full):
     address_full.replace('  ', ' ')
@@ -103,6 +103,8 @@ df["balance"] = pd.to_numeric(df["balance"])
 
 #categorize wallets
 df['type'] = df.apply(check_wallet_type, axis=1)
+
+df.to_csv('wallets_cleaned.csv', index = False)
 
 df = df[['address', 'owner', 'type']]
 df.to_csv('wallets.csv', index = False)
