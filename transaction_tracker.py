@@ -1,39 +1,100 @@
 # -*- coding: utf-8 -*-
 """
-Created on Thu Oct 24 22:36:10 2019
+Created on Thu Oct 24 23:06:50 2019
 
 @author: David
+
+https://www.blockchain.com/explorer?currency=BTC&stat=transactions
 """
 
-#https://github.com/crazicus/Bitcoin-Transaction-Tracker
 
-import requests
-from bs4 import BeautifulSoup
-import time
 import json
-import urllib
-import urllib.request
-import html5lib
+import requests
+from websocket import create_connection
+from datetime import datetime
+import time
+import threading
 
-def BTC_crawl(url):
-  soup = BeautifulSoup(url, 'html5lib')
-  transactions = soup.find("div", {"id": "tx_container"}).findAll("div")
 
-  for transaction in transactions:
-    if(transaction.find("table") is not None):
-      time_stamp = str(transaction.find("span").contents)
-      BTC_val = transaction.find("button").find("span").contents
+ws = create_connection("wss://ws.blockchain.info/inv")
+ws.send(json.dumps({"op":"unconfirmed_sub"}))
 
-      print("Transaction on " + time_stamp[2:-11] + " at " + time_stamp[-10:-2] + ": " + str(BTC_val)[2:-2])
+btc_price = 0
+run = True
+#run = False
+#ws.close()
 
-      
-mybool = True
-last_time = time.time()
-first_time = last_time
-while mybool:
-  if((time.time() - last_time) >= 5):
-    url = urllib.request.urlopen("https://blockchain.info/unconfirmed-transactions")
-    BTC_crawl(url)
-    last_time = time.time()
-  if((time.time() - first_time) >= 30):
-    mybool = False
+df_wallets = pd.read_csv('wallets.csv')
+
+
+
+def run_transactions():
+    while run == True:
+        result = ws.recv()
+        result = json.loads(result)
+        
+        satoshi = result["x"]["inputs"][0]["prev_out"]["value"]
+        btc = satoshi/100000000 
+        dollar = btc * btc_price
+        
+        if dollar > 10000:
+            sender_wallet = result["x"]["inputs"][0]["prev_out"]["addr"]
+            receiver_wallet = result["x"]["out"][0]["addr"]
+            timestamp = result["x"]["time"]
+            date = datetime.fromtimestamp(timestamp)
+            
+            print(int(dollar), sender_wallet, receiver_wallet, date, sep = "//")
+            
+            thread_save_to_db = threading.Thread(target=save_to_db, args=(timestamp,))
+            thread_save_to_db.start()
+            
+
+
+def run_btc_price_ticker():
+    while run == True:
+        URL = 'https://www.bitstamp.net/api/ticker/'
+        try:
+            r = requests.get(URL)
+            global btc_price 
+            btc_price = float(json.loads(r.text)['last'])
+            print("----------" + str(btc_price))
+        except requests.ConnectionError:
+            print("Error querying Bitstamp API")
+            
+        time.sleep(60)
+        
+
+def save_to_db(timestamp):
+    print("save")
+    
+    
+
+
+thread_btc_price_ticker = threading.Thread(target=run_btc_price_ticker)
+thread_transactions = threading.Thread(target=run_transactions)
+
+thread_btc_price_ticker.start()
+thread_transactions.start()
+
+
+
+
+
+'''
+ws = create_connection("wss://api2.bitfinex.com:3000/ws")
+#ws.connect("wss://api2.bitfinex.com:3000/ws")
+ws.send(json.dumps({
+    "event": "subscribe",
+    "channel": "book",
+    "pair": "BTCUSD",
+    "prec": "P0"
+}))
+
+
+while True:
+    result = ws.recv()
+    result = json.loads(result)
+    print ("Received '%s'" % result)
+
+ws.close()
+'''
