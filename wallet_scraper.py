@@ -107,9 +107,26 @@ df['type'] = df.apply(check_wallet_type, axis=1)
 df.to_csv('wallets_cleaned.csv', index = False)
 
 df = df[['address', 'owner', 'type']]
-df.to_csv('wallets.csv', index = False)
+df.to_csv('wallets.csv', index = False) 
 
 
 
 #TODO find patterns from known exchange with clustering and ml
 # CHECK why some wallets have no outs
+
+df = pd.read_csv('wallets_cleaned.csv')
+
+df = df[df['owner'] == 'unknown']
+df = df.fillna('2020-01')
+df['monthly'] = pd.to_datetime(df['last_out']).apply(lambda x: '{year}-{month}'.format(year=x.year, month=x.month))
+
+df['monthly'] =pd.to_datetime(df.monthly, format = '%Y/%m/%d')
+df = df.sort_values(by='monthly') 
+
+tmp = df[['ranking', 'monthly']]
+res = tmp.groupby('monthly').count()
+
+res.plot()
+
+
+
