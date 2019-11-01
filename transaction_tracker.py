@@ -57,7 +57,7 @@ ws.send(json.dumps({"op":"unconfirmed_sub"}))
 
 btc_price = 0
 run = True
-#run = False
+run = False
 #ws.close()
 
 df_wallets = pd.read_csv('wallets.csv')
@@ -73,7 +73,7 @@ def run_transactions():
         btc_value = satoshi/100000000 
         dollar_value = btc_value * btc_price
         
-        if dollar_value > 100000:
+        if dollar_value > 10000:
             transaction_hash = result["x"]["hash"]
             sender_address = result["x"]["inputs"][0]["prev_out"]["addr"]
             receiver_address = result["x"]["out"][0]["addr"]
