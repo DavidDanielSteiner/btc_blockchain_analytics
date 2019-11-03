@@ -216,6 +216,75 @@ ORDER BY txn_count ASC
 """
 
 
+# all transactions
+query = """
+SELECT
+    `hash`
+   , block_timestamp
+   , input_value
+   , output_value
+   , array_to_string(inputs.addresses, ",") as input_address
+   , inputs.value as input_v
+   , array_to_string(outputs.addresses, ",") as output_address
+   , outputs.value as output_v
+    
+FROM `bigquery-public-data.crypto_bitcoin.transactions` AS txns
+CROSS JOIN UNNEST(txns.inputs) AS inputs
+CROSS JOIN UNNEST(txns.outputs) AS outputs
+
+
+WHERE
+    EXTRACT(YEAR FROM block_timestamp) = 2019 AND
+    EXTRACT(MONTH FROM block_timestamp) = 10 AND   
+    EXTRACT(DAY FROM block_timestamp) = 01
+    
+LIMIT 100
+"""
+
+
+query = """
+SELECT 
+    `hash`
+   , txns.block_timestamp
+   , input_value
+   , output_value
+   , array_to_string(inputs.addresses, ",") as input_address
+   , inputs.value as input_v
+   , array_to_string(outputs.addresses, ",") as output_address
+   , outputs.value as output_v
+    
+FROM `bigquery-public-data.crypto_bitcoin.transactions` AS txns
+INNER JOIN `bigquery-public-data.crypto_bitcoin.inputs` AS inputs ON txns.hash = inputs.transaction_hash
+INNER JOIN `bigquery-public-data.crypto_bitcoin.outputs` AS outputs ON txns.hash = outputs.transaction_hash
+
+
+LIMIT 100
+"""
+
+#INNER JOIN txns.inputs AS inputs on txns.hash = inputs.transaction_hash
+#INNER JOIN txns.outputs AS outputs on txns.hash = outputs.transaction_hash
+
+
+query = """
+SELECT 
+    `hash`
+   , txns.block_timestamp
+   , input_value
+   , output_value
+  
+FROM `bigquery-public-data.crypto_bitcoin.transactions` AS txns
+WHERE input_value > 10000000000 AND
+EXTRACT(YEAR FROM block_timestamp) >= 2019
+
+ORDER BY input_value DESC
+LIMIT 1000
+
+
+"""
+
+
+
+
 bytes_in_gigabytes = 2**30
 safe_config = bigquery.QueryJobConfig(
     maximum_bytes_billed=200 * bytes_in_gigabytes
@@ -228,8 +297,13 @@ estimate_gigabytes_scanned(query, client)
 
 
 result = query_job.result()
-df_3 = result.to_dataframe()
+df_4 = result.to_dataframe()
 
+
+
+df_4['input_value'] = pd.to_numeric(df_4['input_value'], errors='ignore')
+df_4['BTC'] = df_4['input_value'] / 100000000
+df = df_4
 
 mem_use = df.memory_usage(deep=True)
 print(mem_use)
@@ -245,13 +319,13 @@ df_3.to_csv('data/partners.csv', index=False)
 
 
 df['block_timestamp'] = pd.to_datetime(df['block_timestamp'] )
-df.set_index('block_timestamp')['output_value'].plot(figsize=(18, 8))
+df.set_index('block_timestamp')['input_value'].plot(figsize=(18, 8))
 
 
 (
     df
     .groupby(df['block_timestamp'].dt.weekday)
-    ['output_value'].sum()
+    ['input_value'].sum()
     .rename(index={i: day for i, day in enumerate(['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'])})
     .plot(kind='bar', figsize=(18, 8))
 )
