@@ -57,7 +57,7 @@ ws.send(json.dumps({"op":"unconfirmed_sub"}))
 
 btc_price = 0
 run = True
-run = False
+#run = False
 #ws.close()
 
 df_wallets = pd.read_csv('wallets.csv')
