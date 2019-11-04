@@ -28,14 +28,16 @@ from itertools import cycle
 
 df_all_wallets = pd.DataFrame()
 
-#df_all_wallets.reset_index()
-#df_all_wallets.to_csv('../data/wallet_explorer_1_11.csv', index=False)
+df_all_wallets.reset_index()
+#df_all_wallets.to_csv('../data/wallet_explorer_20_100.csv', index=False)
 
 
 #categories_names = ['Exchange', 'Pools', 'Services', 'Gambling', 'Historic']
 categories_names = ['Exchange']
 
-
+proxies = pd.read_csv('proxies.txt', sep=" ", header=None)
+proxies.columns = ['a']
+proxies = proxies['a'].tolist()
 
 
 def scrape_owner(owner, category_name, proxy):      
@@ -67,13 +69,13 @@ def scrape_owner(owner, category_name, proxy):
     '''
 
     try:           
-        for page in range(1,10):                
+        for page in range(20,100):                
             full_url = url + str(page)
             
             found_proxy = False
             while found_proxy == False:    
                 try:                   
-                    res = requests.get(full_url, proxies={"http": proxy, "https": proxy}) 
+                    res = requests.get(full_url, proxies={"https": proxy}) 
                     found_proxy = True
                 except:
                     print("connection error " + owner)
@@ -86,7 +88,7 @@ def scrape_owner(owner, category_name, proxy):
             df['category'] = category_name
             df_all_wallets = df_all_wallets.append(df)
             print(proxy, owner, "appended page: ",str(page) , sep=" ")
-            time.sleep(5)
+            time.sleep(3)
 
     except Exception :
         thread_scrape_owner.exit()
@@ -115,8 +117,8 @@ def get_proxies():
 proxies_used = []
 
 def find_working_proxy(url):
-    #print("Scraping proxies")
-    proxies = get_proxies()
+    #proxies = get_proxies()
+
     proxy_pool = cycle(proxies)   
     found_proxy = False   
     
@@ -125,10 +127,10 @@ def find_working_proxy(url):
             if test_proxy not in proxies_used:
                 proxies_used.append(test_proxy)             
                 try:
-                    test = requests.get(url,proxies={"http": test_proxy, "https": test_proxy})     
+                    #test = requests.get(url,proxies={"http": test_proxy, "https": test_proxy})     
+                    test = requests.get(url,proxies={"https": test_proxy})    
                     print(test_proxy + " connected")
                     found_proxy = True
-                    time.sleep(1)
                     return test_proxy
                 except:
                     pass
@@ -150,7 +152,7 @@ proxy = find_working_proxy("https://www.walletexplorer.com/")
 
 while found_proxy == False:    
     try: 
-        res = requests.get("https://www.walletexplorer.com/",proxies={"http": proxy, "https": proxy}) 
+        res = requests.get("https://www.walletexplorer.com/",proxies={"https": proxy}) 
         found_proxy = True
     except:
         print("connection error start")

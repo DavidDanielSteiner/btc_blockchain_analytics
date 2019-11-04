@@ -25,7 +25,7 @@ connected = False
 df_all_wallets = pd.DataFrame()
 
 df_all_wallets.reset_index()
-df_all_wallets.to_csv('../data/wallet_explorer_1_11.csv', index=False)
+df_all_wallets.to_csv('../data/wallet_explorer_x_x.csv', index=False)
 
 
 ##categories_names = ['Exchange', 'Pools', 'Services', 'Gambling', 'Historic']
