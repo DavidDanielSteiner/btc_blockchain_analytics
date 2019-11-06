@@ -1,11 +1,8 @@
 # -*- coding: utf-8 -*-
 """
-Created on Sun Nov  3 01:22:22 2019
+Created on Sun Nov  3 19:23:55 2019
 
 @author: David
-
-
-https://scrapestack.com/documentation
 """
 
 import pandas as pd
@@ -17,20 +14,65 @@ import time
 import traceback
 from lxml.html import fromstring
 from itertools import cycle
+from sqlalchemy import create_engine 
+import importlib.util
 
-#run = True
-#run = False
-proxy = ''
-connected = False
-df_all_wallets = pd.DataFrame()
+#SETUP
+spec = importlib.util.spec_from_file_location("module.name", "C:/Users/David/Dropbox/Code/config.py")
+config = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(config)
 
-df_all_wallets.reset_index()
-df_all_wallets.to_csv('../data/wallet_explorer_x_x.csv', index=False)
+DB_CREDENTIALS = config.sqlalchemy_DATASTIG_CRYPTO  
+engine = create_engine(DB_CREDENTIALS)
+
+categories_names = ['Exchange', 'Pools', 'Services', 'Gambling', 'Historic']
+
+proxies = pd.read_csv('proxies.txt', names=['ips'], header=None, index_col=False) #https://proxyscrape.com/free-proxy-list
+proxies =  proxies.ips.values.tolist()
+proxies_used = []
 
 
-##categories_names = ['Exchange', 'Pools', 'Services', 'Gambling', 'Historic']
-categories_names = ['Exchange']
 
+def scrape_owner(owner, category_name, proxy):      
+    #global df_all_wallets    
+    url_pages = "https://www.walletexplorer.com/wallet/" + owner
+    res, proxy = get_response(proxy, url_pages)
+    res = requests.get(url_pages) 
+    soup = BeautifulSoup(res.content,'lxml')      
+    tmp = []   
+    for data in soup.find_all('div', class_='paging'):
+        for a in data.find_all('a'):
+            tmp.append(a.get('href'))
+    tmp = tmp[-1]
+    max_page = re.findall(r'\d+', tmp)[0]
+    max_page = int(max_page)
+    print("Total Pages for", owner, max_page, sep = " ")
+                   
+    for page in range(1,max_page):   
+        try:            
+            url = "https://www.walletexplorer.com/wallet/" + owner + "/addresses?page=" + str(page)    
+            res, proxy = get_response(proxy, url)                  
+            soup = BeautifulSoup(res.content,'lxml')
+            table = soup.find_all('table')[0]
+            df = pd.read_html(str(table))[0]
+            df['owner'] = owner
+            df['category'] = category_name
+            df = df.drop(columns=['balance', 'incoming txs', 'last used in block'])
+            #df_all_wallets = df_all_wallets.append(df)
+            df.to_sql("wallets_new", engine, index=False, if_exists='append') 
+            print(proxy, owner, "appended page: ",str(page) , sep=" ")
+            time.sleep(1)
+        except Exception :        
+            print(traceback.format_exc())
+            break
+       
+    print(">>>>>>>>>>>>" + owner + " " + str(page) + " finished<<<<<<<<<<<<<<")
+    proxies_used.remove(proxy)
+    
+      
+# =============================================================================
+#  Proxies
+# =============================================================================
 
 def get_proxies():
     url = 'https://free-proxy-list.net/'
@@ -43,120 +85,52 @@ def get_proxies():
             proxy = ":".join([i.xpath('.//td[1]/text()')[0], i.xpath('.//td[2]/text()')[0]])
             proxies.add(proxy)
     return proxies
-
-
-def scrape_owner(owner, category_name):   
-    global proxy
-    global connected
-    print("--NEW THREAD STARTED: " + owner + "--")     
-    url = "https://www.walletexplorer.com/wallet/" + owner + "/addresses?page="
-    df_owner_wallets = pd.DataFrame()    
-    t = threading.currentThread()
     
-    #GET max_page for wallet owner
-    '''  
+
+def find_working_proxy(url):
+    #proxies = get_proxies()
+    proxy_pool = cycle(proxies)   
+    found_proxy = False   
+    
+    while found_proxy == False: 
+            test_proxy = next(proxy_pool)
+            if test_proxy not in proxies_used:
+                proxies_used.append(test_proxy)   
+                print(len(proxies_used), "/" ,len(proxies), " proxies used", sep ="")
+                try:     
+                    res = requests.get(url, proxies={"http": test_proxy, "https": test_proxy})    
+                    print(test_proxy + " connected")
+                    found_proxy = True
+                    return res, test_proxy
+                except:
+                    print(test_proxy + " not working. Skipping")                       
+
+
+def get_response(proxy, url):
     found_proxy = False
     while found_proxy == False:    
         try:                   
-            url_pages = "https://www.walletexplorer.com/wallet/" + owner
-            res = requests.get(url_pages, proxies={"http": proxy, "https": proxy}) 
+            res = requests.get(url, proxies={"http": proxy, "https": proxy}) 
             found_proxy = True
-            connected = True
+            return res, proxy
         except:
-            connected = False
-            find_working_proxy(url_pages)   
-    res = requests.get(url_pages) 
-    soup = BeautifulSoup(res.content,'lxml')      
-    tmp = []   
-    for data in soup.find_all('div', class_='paging'):
-        for a in data.find_all('a'):
-            tmp.append(a.get('href'))         
-    tmp = tmp[-1]
-    max_page = re.findall(r'\d+', tmp)[0]
-    print(max_page)
-    '''
-
-    try:           
-        for page in range(40,80):
-            if getattr(t, "loop", True):#    
-                full_url = url + str(page)
-                
-                found_proxy = False
-                while found_proxy == False:    
-                    try:                   
-                        res = requests.get(full_url, proxies={"http": proxy, "https": proxy}) 
-                        found_proxy = True
-                        connected = True
-                    except:
-                        connected = False
-                        find_working_proxy(full_url)
-                                  
-                soup = BeautifulSoup(res.content,'lxml')
-                table = soup.find_all('table')[0]
-                df = pd.read_html(str(table))[0]
-                df['owner'] = owner
-                df['category'] = category_name
-                df_owner_wallets = df_owner_wallets.append(df)
-                print("appended page: ",str(page), owner, category_name, sep=" ")
-                time.sleep(20)
-
-    except Exception :
-        t.loop = False
-        thread_scrape_owner.exit()
-        print("--------", str(page), owner, "--------", sep=" ")
-        print(traceback.format_exc())
-        pass
-    
-    global df_all_wallets
-    df_all_wallets = df_all_wallets.append(df_owner_wallets)
-    print("Current size of dataframe: " + str(len(df_all_wallets)))
- 
-  
-def find_working_proxy(url):
-    global proxy
-    if connected == False:
-        proxies = get_proxies()
-        proxy_pool = cycle(proxies)   
-        proxy = next(proxy_pool)
-        found_proxy = False
-    
-        while found_proxy == False: 
-            if connected == False:
-                test_proxy = next(proxy_pool)
-                try:
-                    res = requests.get(url,proxies={"http": test_proxy, "https": test_proxy})                 
-                    print(proxy + " connected")
-                    proxy = test_proxy
-                    found_proxy = True
-                    #return proxy
-                except:
-                    #print(traceback.format_exc())
-                    print(proxy + " connection error. Skipping")            
-
-                        
-                        
+            print("connection error " + owner)
+            res, proxy = find_working_proxy(url)
+            return res, proxy    
     
 # =============================================================================
 # START    
 # =============================================================================
-    
+     
 print('Searching for connection. Please wait')   
-found_proxy = False
-while found_proxy == False:    
-    try: 
-        res = requests.get("https://www.walletexplorer.com/",proxies={"http": proxy, "https": proxy}) 
-        found_proxy = True
-        connected = True
-    except:
-        connected = False
-        find_working_proxy("https://www.walletexplorer.com/")
-  
-#res = requests.get("https://www.walletexplorer.com/")
+url = "https://www.walletexplorer.com/"
+res, proxy = find_working_proxy(url)
+
 soup = BeautifulSoup(res.content,'lxml')
 categories_lists = soup.find_all('ul')   
 
-
 for counter, category in enumerate(categories_names):
+    #if counter == 1 or counter == 2 or counter == 3:
     category_name = categories_names[counter]
     categories_list = categories_lists[counter]
    
@@ -167,10 +141,12 @@ for counter, category in enumerate(categories_names):
         owner = re.sub(pattern, '', owner).strip()
         owners_list.append(owner)
         
-    for owner in owners_list:
-        thread_scrape_owner = threading.Thread(target=scrape_owner, args=(owner, category_name))
+    for counter, owner in enumerate(owners_list):
+        proxy = find_working_proxy("https://www.walletexplorer.com/")      
+        print("--THREAD " + str(counter) + "/" + str(len(owners_list)) + " STARTED " + owner + "--")  
+        thread_scrape_owner = threading.Thread(target=scrape_owner, args=(owner, category_name, proxy))
         thread_scrape_owner.start()
-        time.sleep(10)
+
 
             
         

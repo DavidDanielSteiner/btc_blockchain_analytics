@@ -218,31 +218,6 @@ ORDER BY txn_count ASC
 
 # all transactions
 query = """
-SELECT
-    `hash`
-   , block_timestamp
-   , input_value
-   , output_value
-   , array_to_string(inputs.addresses, ",") as input_address
-   , inputs.value as input_v
-   , array_to_string(outputs.addresses, ",") as output_address
-   , outputs.value as output_v
-    
-FROM `bigquery-public-data.crypto_bitcoin.transactions` AS txns
-CROSS JOIN UNNEST(txns.inputs) AS inputs
-CROSS JOIN UNNEST(txns.outputs) AS outputs
-
-
-WHERE
-    EXTRACT(YEAR FROM block_timestamp) = 2019 AND
-    EXTRACT(MONTH FROM block_timestamp) = 10 AND   
-    EXTRACT(DAY FROM block_timestamp) = 01
-    
-LIMIT 100
-"""
-
-
-query = """
 SELECT 
     `hash`
    , txns.block_timestamp
@@ -256,7 +231,6 @@ SELECT
 FROM `bigquery-public-data.crypto_bitcoin.transactions` AS txns
 INNER JOIN `bigquery-public-data.crypto_bitcoin.inputs` AS inputs ON txns.hash = inputs.transaction_hash
 INNER JOIN `bigquery-public-data.crypto_bitcoin.outputs` AS outputs ON txns.hash = outputs.transaction_hash
-
 
 LIMIT 100
 """
@@ -278,12 +252,46 @@ EXTRACT(YEAR FROM block_timestamp) >= 2019
 
 ORDER BY input_value DESC
 LIMIT 1000
-
-
 """
 
 
+#get all transactios for one wallet
+#### IMPORTANT: Timestamp: welches format, zeizonse
 
+query = """
+WITH all_transactions AS (
+-- inputs
+SELECT 
+    transaction_hash
+   , block_timestamp as timestamp
+   , array_to_string(addresses, ",") as address
+   , value
+   , 'input' as type
+FROM `bigquery-public-data.crypto_bitcoin.inputs`
+
+UNION ALL
+
+-- outputs
+SELECT 
+    transaction_hash
+   , block_timestamp as timestamp
+   , array_to_string(addresses, ",") as address
+   , value
+   , 'output' as type
+FROM `bigquery-public-data.crypto_bitcoin.outputs`
+)
+SELECT
+   transaction_hash
+   , timestamp
+   , address
+   , value
+   , type
+FROM all_transactions
+WHERE address = '35hK24tcLEWcgNA4JxpvbkNkoAcDGqQPsP'
+"""
+
+
+job_config = bigquery.QueryJobConfig()
 
 bytes_in_gigabytes = 2**30
 safe_config = bigquery.QueryJobConfig(
@@ -291,13 +299,10 @@ safe_config = bigquery.QueryJobConfig(
 )
 query_job = client.query(query, job_config=safe_config)
 
-
 estimate_gigabytes_scanned(query, client)
 
-
-
 result = query_job.result()
-df_4 = result.to_dataframe()
+df_address = result.to_dataframe()
 
 
 
@@ -310,6 +315,27 @@ print(mem_use)
 mem_use.sum() / bytes_in_gigabytes
 
 df_3.to_csv('data/partners.csv', index=False)
+
+
+
+# =============================================================================
+# Test
+# =============================================================================
+
+import importlib.util
+spec = importlib.util.spec_from_file_location("module.name", "C:/Users/David/Dropbox/Code/config.py")
+config = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(config)
+DB_CREDENTIALS = config.sqlalchemy_DATASTIG_CRYPTO  
+
+from sqlalchemy import create_engine 
+engine = create_engine(DB_CREDENTIALS)
+
+df = pd.read_sql_query('''SELECT * FROM lyricmatcher WHERE id=4995''', engine) 
+
+
+
+
 
 
 
