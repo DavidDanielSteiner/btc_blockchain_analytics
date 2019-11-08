@@ -39,9 +39,16 @@ engine = create_engine(DB_CREDENTIALS)
 # Prepare Full Wallet Dataset for Binary Classification
 # =============================================================================
 
-wallets = pd.read_sql_query('''SELECT * FROM wallets_raw''', engine) 
-#list_addresses =  wallets.address.values.tolist()
-list_addresses = ['35hK24tcLEWcgNA4JxpvbkNkoAcDGqQPsP']
+wallets = pd.read_sql_query('''SELECT * FROM wallets_raw WHERE category ='Exchange' Limit 100000''', engine) 
+wallets.to_csv("sample_exchanges_100k.csv", index=False)
+#wallets.to_csv("sample_other_100k.csv", index=False)
+
+wallets['category'].value_counts()
+wallets.loc[wallets['category'] != 'Exchange', 'category'] = 'Other'
+list_addresses =  wallets.address.values.tolist()
+#list_addresses = ['35hK24tcLEWcgNA4JxpvbkNkoAcDGqQPsP']
+
+
 
 #get transaction overview from list of wallets
 query = """
@@ -80,7 +87,6 @@ SELECT
 FROM all_transactions
 WHERE address in UNNEST(@address)
 GROUP BY type, address
-LIMIT 1000
 """
 
 query_params = [    
@@ -96,27 +102,7 @@ query_job = client.query(
 result = query_job.result()
 wallet_info = result.to_dataframe()
 
-#df_address.to_csv("df_address_10000.csv")
-
-#wallet_info.dtypes
-wallet_info['first_transaction'] = pd.to_datetime(wallet_info['first_transaction'])
-wallet_info['last_transaction'] = pd.to_datetime(wallet_info['last_transaction'])
-wallet_info['days_old'] = (wallet_info['last_transaction'] - wallet_info['first_transaction']).dt.days
-
-tmp1 = wallet_info[wallet_info['type'] == 'sent']
-tmp2 = wallet_info[wallet_info['type'] == 'received']
-wallet_merged = tmp1.merge(tmp2, how = "inner", on="address")
-
-
-
-
-
-
-
-
-
-
-
+#wallet_info.to_csv("wallet_sample_1_10000.csv")
 
 
 
