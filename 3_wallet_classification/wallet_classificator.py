@@ -15,7 +15,7 @@ import numpy as np
 '''Import and merge Data'''
 exchange_labels = pd.read_csv('../data/sample_exchanges_100k.csv', index_col = False)
 exchange_features = pd.read_csv('../data/exchange_features.csv', index_col = False)
-exchange = exchange_labels.merge(exchange_features, how = "inner", on="address")
+exchange = exchange_features.merge(exchange_labels, how = "inner", on="address")
 
 other_labels = pd.read_csv('../data/sample_other_100k.csv')
 other_features = pd.read_csv('../data/other_features.csv')
@@ -47,7 +47,7 @@ data.rename(columns = {"category_y": "category",
 
 
 '''Data Exploration
-#data = pd.read_csv('../data/trainingset_1.csv', index_col = False)
+data = pd.read_csv('../data/trainingset_1.csv', index_col = False)
 
 data.describe()
 data.info()
@@ -61,7 +61,7 @@ sns.heatmap(corr,
 data['number_transactions_x'].corr( data["days_old_y"])
 
 '''
-
+#data = pd.read_csv('../data/wallets_cleaned.csv', index_col = False)
 
 '''Feature Engineering'''
 #data = data[(data['category']=='Gambling') | (data['category']=='Services')]
@@ -75,8 +75,14 @@ data.drop(['last_transaction_y', 'first_transaction_y', 'address', 'type_x', 'ty
 #data.drop(['last_transaction_y', 'first_transaction_y', 'address', 'type_x', 'owner', 'type_y'], axis=1, inplace=True)
 #data.drop(data.columns[:1], axis=1, inplace=True)
 
-feature_num = len(data.columns)-1
+data = data[data['first_transaction_x'] == 2017]
 
+
+
+
+
+feature_num = len(data.columns)-1
+#labels=data['category']
 labels=data['category']
 features = data.iloc[:,0:feature_num]
 
@@ -98,13 +104,14 @@ from keras.layers import Dense
 model = Sequential()
 model.add(Dense(feature_num, activation='relu', input_shape=(feature_num,)))
 model.add(Dense(feature_num, activation='relu'))
+model.add(Dense(feature_num, activation='relu'))
 model.add(Dense(1, activation='sigmoid'))
 
 model.compile(loss='binary_crossentropy',
               optimizer='sgd',
               metrics=['accuracy'])
                    
-model.fit(X_train, y_train,epochs=5, batch_size=1, verbose=1)
+model.fit(X_train, y_train,epochs=10, batch_size=1, verbose=1)
 
 
 for layer in model.layers:
