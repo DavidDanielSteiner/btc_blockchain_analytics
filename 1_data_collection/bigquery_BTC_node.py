@@ -34,6 +34,32 @@ from sqlalchemy import create_engine
 engine = create_engine(DB_CREDENTIALS)
 
 
+# =============================================================================
+# Helpers
+# =============================================================================
+
+def get_atts(obj, filter=""):
+    """Helper function wich prints the public attributes and methods of the given object.
+    Can filter the results for simple term.
+    - `obj`: the Python object of interest
+    - `filter`, str: The filter term
+    """
+    return [a for a in dir(obj) if not a.startswith('_') and filter in a]
+
+
+def estimate_gigabytes_scanned(query, bq_client):
+    """A useful function to estimate query size. 
+    Originally from here: https://www.kaggle.com/sohier/beyond-queries-exploring-the-bigquery-api/
+    """
+    my_job_config = bigquery.job.QueryJobConfig()
+    my_job_config.dry_run = True
+    my_job = bq_client.query(query, job_config=my_job_config)
+    BYTES_PER_GB = 2**30
+    estimate = my_job.total_bytes_processed / BYTES_PER_GB    
+    print(f"This query will process {estimate} GBs.")
+
+
+
 
 # =============================================================================
 # Prepare Full Wallet Dataset for Binary Classification
@@ -47,7 +73,6 @@ wallets['category'].value_counts()
 wallets.loc[wallets['category'] != 'Exchange', 'category'] = 'Other'
 list_addresses =  wallets.address.values.tolist()
 #list_addresses = ['35hK24tcLEWcgNA4JxpvbkNkoAcDGqQPsP']
-
 
 
 #get transaction overview from list of wallets
@@ -101,160 +126,111 @@ query_job = client.query(
 )
 result = query_job.result()
 wallet_info = result.to_dataframe()
-
-#wallet_info.to_csv("wallet_sample_1_10000.csv")
-
-
-
+wallet_info.to_csv("wallet_sample_1_10000.csv")
 
 # =============================================================================
-# 
+# get wallets with max transaction value
 # =============================================================================
-
-#get wallets with max transaction value
-query = """
-SELECT 
-     block_timestamp
-   , address
-   , output_value
-  
-FROM `bigquery-public-data.crypto_bitcoin.transactions` AS txns
-WHERE output_value > 10000000000 AND
-EXTRACT(YEAR FROM block_timestamp) = 2018
-
-ORDER BY output_value DESC
-"""
 
 query = """
 SELECT 
     transaction_hash
    , block_timestamp as timestamp
    , array_to_string(addresses, ",") as address
-   , value
-   , 'sent' as type
+   , value as satoshis
+  
 FROM `bigquery-public-data.crypto_bitcoin.outputs`
-WHERE value > 10000000000
+WHERE value >= 50000000000
+ORDER BY block_timestamp DESC
 """
+
+job_config = bigquery.QueryJobConfig()
+query_job = client.query(query)
+result = query_job.result()
+outputs = result.to_dataframe()
+outputs.to_csv("outputs_500BTC.csv", index=False)
+
+
+query = """
+SELECT 
+    transaction_hash
+   , block_timestamp as timestamp
+   , array_to_string(addresses, ",") as address
+   , value as satoshis
+  
+FROM `bigquery-public-data.crypto_bitcoin.inputs`
+WHERE value >= 50000000000
+ORDER BY block_timestamp DESC
+"""
+
+job_config = bigquery.QueryJobConfig()
+query_job = client.query(query)
+result = query_job.result()
+inputs = result.to_dataframe()
+inputs.to_csv("inputs_500BTC.csv", index=False)
+
+
+# =============================================================================
+# get transactions with max transaction value
+# =============================================================================
+
+query = """
+SELECT
+    timestamp,
+    transaction_id,
+    inputs.input_pubkey_base58 AS sender,
+    outputs.output_pubkey_base58 AS receiver,
+    outputs.output_satoshis as satoshis
+FROM `bigquery-public-data.bitcoin_blockchain.transactions`
+    JOIN UNNEST (inputs) AS inputs
+    JOIN UNNEST (outputs) AS outputs
+WHERE outputs.output_satoshis  >= 5000000000
+    AND inputs.input_pubkey_base58 IS NOT NULL
+    AND outputs.output_pubkey_base58 IS NOT NULL
+    AND timestamp > 1483228800
+GROUP BY timestamp, sender, receiver, satoshis
+"""
+
+
+query = """
+SELECT
+    `hash`,
+    block_timestamp,
+    array_to_string(inputs.addresses, ",") as sender,
+    array_to_string(outputs.addresses, ",") as receiver,
+    output_value / 100000000 as value
+FROM `bigquery-public-data.crypto_bitcoin.transactions`
+    JOIN UNNEST (inputs) AS inputs
+    JOIN UNNEST (outputs) AS outputs
+WHERE outputs.value  >= 50000000000
+    AND inputs.addresses IS NOT NULL
+    AND outputs.addresses IS NOT NULL
+GROUP BY `hash`, block_timestamp, sender, receiver, value
+"""
+
+job_config = bigquery.QueryJobConfig()
+query_job = client.query(query)
+result = query_job.result()
+large_transactions = result.to_dataframe()
+large_transactions.to_csv("transactions_500BTC_2.csv", index=False)
+
+
+
+satoshi_amount = 500 * BTC
+query_params = [    
+    bigquery.ScalarQueryParameter("satoshis", "INT64", satoshi_amount),
+]
+
+
+estimate_gigabytes_scanned(query, client)
 
 job_config = bigquery.QueryJobConfig()
 job_config.query_parameters = query_params
 query_job = client.query(query)
 result = query_job.result()
-df_large_transactions = result.to_dataframe()
 
-df_large_transactions.head()
+large_transactions = result.to_dataframe()
+large_transactions.head()
 
-# =============================================================================
-# Compare transaction volume to price
-# =============================================================================
+large_transactions.to_csv("transactions_50BTC.csv", index=False)
 
-timeframe = ['2018-01-01','2018-04-01']
-
-'''Transactions BTC Value'''
-tnx = df_large_transactions
-tnx['Date'] = pd.to_datetime(tnx['block_timestamp'] )
-#df['Date'] = pd.to_datetime(df['Date']).apply(lambda x: '{year}-{month}-{day}'.format(year=x.year, month=x.month, day=x.day))
-#tnx['Date'] = pd.to_datetime(tnx.Date)
-tnx["output_value"] = pd.to_numeric(df["output_value"] / BTC)
-tnx.set_index('Date', inplace=True)
-tnx = tnx[['output_value']].loc[timeframe[0]:timeframe[1]]
-#df["output_value"].describe()
-
-
-'''Load BTC Price'''
-btc_price = pd.read_csv('BTC_USD.csv')
-v
-btc_price.set_index('Date', inplace=True)
-btc_price_open = btc_price[['Open']].loc[timeframe[0]:timeframe[1]]
-btc_price_close = btc_price[['Close']].loc[timeframe[0]:timeframe[1]]
-btc_price_return = btc_price_close.pct_change(1)
-
-#Plottting
-fig, ax = plt.subplots(figsize=(16, 8)) 
-btc_price_return.plot(ax = ax) 
-ax.axhline(y=0, color='r', linestyle='-', lw=2)
-
-#Plot
-fig, ax = plt.subplots(figsize=(40, 8)) 
-btc_price_open.plot(ax = ax) 
-btc_price_close.plot(ax = ax) 
-btc_price_return.plot(ax = ax, secondary_y = True)
-
-
-'''Transactions Dollar Value'''
-#Dollar value
-txns_dollar = tnx.join(btc_price, how="inner")
-txns_dollar['value'] = txns_dollar['output_value'] * txns_dollar['Close'] 
-txns_dollar = txns_dollar[['value']]
-
-res = txns_dollar[txns_dollar['value'] > 1000000]
-#res.to_csv("transactions_1mio_2018.csv")
-res = res.sort_values(by='Date') 
-res = res.groupby('Date').sum()
-#res = res.groupby('Date').max()
-#res = res[res['output_value'] < 900000]
-res.plot(figsize=(16, 8))
-
-all_days = pd.date_range(timeframe[0], timeframe[1], freq='D')
-res = res.reindex(all_days)
-
-
-# =============================================================================
-# Wallets Merge
-# =============================================================================
-
-labeled_transactions = df_large_transactions.merge(wallets, how='inner', on='address')
-labeled_transactions["value"] = pd.to_numeric(labeled_transactions["value"] / BTC)
-labeled_transactions['Date'] = pd.to_datetime(labeled_transactions['timestamp'] )
-labeled_transactions.set_index('Date', inplace=True)
-tmp = labeled_transactions[['value']]
-tmp.plot(figsize=(16, 8))
-
-
-df_large_transactions["value_btc"] = pd.to_numeric(df_large_transactions["value"] / BTC)
-df_large_transactions['Date'] = pd.to_datetime(df_large_transactions['timestamp'] )
-df_large_transactions.set_index('Date', inplace=True)
-tmp2 = df_large_transactions[['value_btc']]
-tmp2.plot(figsize=(16, 8))
-
-
-
-
-# =============================================================================
-# Plotting
-# =============================================================================
-
-'''Plot with 2 Plots'''
-fig, ax = plt.subplots(figsize=(40, 8)) # Create the figure and axes object
-res.plot(ax = ax) 
-btc_price_return.plot(ax = ax, secondary_y = True) 
-ax.axhline(secondary_y=0, color='r', linestyle='-', lw=2)
-
-
-
-'''Plot with x Plots'''
-fig, ax = plt.subplots(figsize=(30, 8))
-ax3 = ax.twinx()
-rspine = ax3.spines['right']
-rspine.set_position(('axes', 1.15))
-ax3.set_frame_on(True)
-ax3.patch.set_visible(False)
-fig.subplots_adjust(right=1)
-
-ax4 = ax.twinx()
-rspine = ax4.spines['right']
-rspine.set_position(('axes', 1.15))
-ax4.set_frame_on(True)
-ax4.patch.set_visible(False)
-fig.subplots_adjust(right=1)
-
-
-btc_price_return.plot(ax=ax, style='r-')
-#btc_price_close.plot(ax=ax, style='b-', secondary_y=True)
-res.plot(ax=ax3, style='g-')
-btc_price_open.plot(ax=ax4, style='y-')
-ax.axhline(y=0, color='r', linestyle='-', lw=2)
-
-# add legend 
-ax3.legend([ax.get_lines()[0], ax.right_ax.get_lines()[0], ax3.get_lines()[0]],\
-           ['A','B','C'], bbox_to_anchor=(1.5, 0.5))
