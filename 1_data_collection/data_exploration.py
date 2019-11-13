@@ -25,7 +25,7 @@ tnx = tnx[['output_value']].loc[timeframe[0]:timeframe[1]]
 
 '''Load BTC Price'''
 btc_price = pd.read_csv('BTC_USD.csv')
-v
+
 btc_price.set_index('Date', inplace=True)
 btc_price_open = btc_price[['Open']].loc[timeframe[0]:timeframe[1]]
 btc_price_close = btc_price[['Close']].loc[timeframe[0]:timeframe[1]]

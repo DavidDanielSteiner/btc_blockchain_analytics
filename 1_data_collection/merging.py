@@ -16,17 +16,16 @@ btc_price_data = pd.read_csv("data/btc.csv") #https://coinmetrics.io/community-d
 tnx = pd.read_csv("data/transactions_500BTC_2.csv")
 wallets_1 = pd.read_csv("data/wallets_walletexplorer.csv", index_col=False)
 wallets_2 = pd.read_csv("data/wallets_bitinfocharts.csv", index_col=False)
-
+#wallets_3 = pd.read_csv("data/wallets_bitinfocharts_missing.csv", index_col=False)
+wallets_3 = pd.read_csv("data/found_full.csv", index_col=False)
 
 #Preprocess transactions
-#tnx['date'] = pd.to_datetime(tnx['timestamp'], unit='ms' )
-#tnx['btc'] = tnx['satoshis'].apply(lambda x: x/100000000)
 tnx['date'] = pd.to_datetime(tnx['block_timestamp']).apply(lambda x: '{year}-{month}-{day}'.format(year=x.year, month=x.month, day=x.day))
-
 
 #Merge with wallets
 wallets = wallets_1[['address', 'owner', 'category']]
 wallets = wallets.append(wallets_2.dropna())
+wallets = wallets.append(wallets_3.dropna())
 wallets = wallets.drop_duplicates(subset='address', keep='last')
 
 sender = pd.merge(tnx, wallets, left_on='sender', right_on='address', how='left')

@@ -54,9 +54,6 @@ for counter, address_df in enumerate(address_list):
     thread_scrape_owner.start()      
 
 
-    
-len(wallet_list)
-
 #Export to csv
 wallets = pd.DataFrame(wallet_list, columns = ['address', 'owner']) 
 wallets['category'] = 'Exchange' 
@@ -69,5 +66,6 @@ def remove_digits(address):
     else: 
         return "unknown"
 
-wallets["test"] = wallets["address_full"].apply(remove_digits)
-wallets.to_csv('wallets_bitinfocharts_missing.csv', index = False)
+wallets["owner"] = wallets["owner"].apply(remove_digits)
+walletsx = wallets[wallets['owner'] != 'unknown']
+walletsx.to_csv('wallets_bitinfocharts_missing.csv', index = False)
