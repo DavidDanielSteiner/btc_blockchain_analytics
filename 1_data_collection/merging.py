@@ -9,7 +9,7 @@ import random
 import string
 
 #import
-btc_price_data = pd.read_csv("data/btc.csv") #https://coinmetrics.io/community-data-dictionary/
+btc_price_data = pd.read_csv("data/btc_price_data.csv") #https://coinmetrics.io/community-data-dictionary/
 btc_price_data = btc_price_data[['date', 'CapMrktCurUSD','PriceUSD']]
 tnx = pd.read_csv("data/transactions_over_500BTC.csv")
 wallets_1 = pd.read_csv("data/wallets_walletexplorer.csv", index_col=False)
@@ -151,7 +151,8 @@ for i in range(8):
 df_grouped.to_csv("transactions_10MIO.csv", index=False)
 
 df_unique = group_transactions(filtered_transactions, unique=True)
-df_unique = df_unique[['']]
+df_unique.rename(columns = {"block_timestamp" : 'date', 'dollar':'usd'}, inplace = True) 
+df_unique = df_unique[['hash', 'date', 'btc', 'usd', 'sender_name', 'sender_category', 'receiver_name', 'receiver_category' ]]
 df_unique.to_csv("transactions_unique_10MIO.csv", index=False)
 
 

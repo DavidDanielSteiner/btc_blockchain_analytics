@@ -6,13 +6,9 @@ Created on Sat Nov  9 12:33:29 2019
 
 https://www.kaggle.com/ibadia/bitcoin-101-bitcoins-and-detailed-insights
 https://www.kaggle.com/sohier/tracing-the-10-000-btc-pizza
-"""
 
 
 
-
-
-'''
 df = df[df['owner'] == 'unknown']
 df = df.fillna('2020-01')
 df['monthly'] = pd.to_datetime(df['last_out']).apply(lambda x: '{year}-{month}'.format(year=x.year, month=x.month))
@@ -24,7 +20,28 @@ tmp = df[['ranking', 'monthly']]
 res = tmp.groupby('monthly').count()
 
 res.plot()
-'''
+"""
+
+
+
+
+
+
+'''MT GOX'''
+import numpy as np
+filtered_transactions = filtered_transactions.replace(np.nan, 'unknown', regex=True)
+other_other = df_grouped[(df_grouped['sender_name2_x'] == 'unknown') &  (df_grouped['receiver_name2_x'] == 'unknown')]
+
+tmp = df_grouped[df_grouped['sender_name'] =='Mt.Gox']
+tmp = df_grouped[df_grouped['hash'] =='2beb7a87c73addffa0ed699bd324957991ff92f5f127de2e60240008cace8d93']
+tmp = df_grouped[df_grouped['hash'] =='7310efd96d4027707f5b3eb38cd7611fe90c85466f63f8d03469eead905ed1c3']
+tmp = df_grouped[df_grouped['hash'] =='55454a47565f17cb29d96a78645ed44e089d4701a1d6c1c537441a2b205c9edf']
+tmp = df_grouped[df_grouped['hash'] =='3bb69b7b847f1abbab86644c46ccd6d1f48b0f2b68bb51ce4cf2bee69454e86d']
+tmp = df_grouped[df_grouped['hash'] =='fa824de460a4048fdc404b041bfad6ae5c689ec196721f1eb7ae6c439961df86']
+#testing
+#a = max(data.date)
+#tnx.columns.values
+#tmp = tnx.head(1000)
 
 
 
