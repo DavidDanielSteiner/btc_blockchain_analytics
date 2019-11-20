@@ -22,8 +22,8 @@ wallets = pd.read_csv("data/wallets_walletexplorer.csv", index_col=False)
 sns.countplot(x='category', data=wallets) 
 
 plt.figure(figsize = (15,40))
-#order = wallets['address'].value_counts(ascending=False).index
-sns.countplot(y='owner', data=wallets) 
+order = wallets['address'].value_counts(ascending=False).index
+sns.countplot(y='owner', data=wallets, order = order) 
 
 
 
