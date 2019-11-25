@@ -8,11 +8,9 @@ Created on Fri Oct 25 23:20:12 2019
 import pandas as pd
 import requests
 from bs4 import BeautifulSoup
-import re
 
 
 df_btc_wallets = pd.DataFrame()
-
 
 res = requests.get("https://bitinfocharts.com/top-100-richest-bitcoin-addresses.html")
 soup = BeautifulSoup(res.content,'lxml')
@@ -54,13 +52,9 @@ for page in range(2, 101):
     df_btc_wallets = df_btc_wallets.append(df_top)
     df_btc_wallets = df_btc_wallets.append(df_bottom)
 
-#Export to csv
-df_btc_wallets.to_csv('wallets_uncleaned.csv', index = False)
-
 
 """Data Cleaning"""
-#df = df_btc_wallets
-df = pd.read_csv('wallets_uncleaned.csv')
+df = df_btc_wallets
 
 def get_owner(address_full):
     address_full.replace('  ', ' ')

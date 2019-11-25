@@ -1,12 +1,5 @@
 # -*- coding: utf-8 -*-
 """
-Created on Tue Nov 12 16:46:36 2019
-
-@author: David
-"""
-
-# -*- coding: utf-8 -*-
-"""
 Created on Fri Oct 25 23:20:12 2019
 
 @author: David
@@ -17,7 +10,6 @@ import numpy as np
 import requests
 from bs4 import BeautifulSoup
 import threading
-from itertools import cycle
 import time
 
 address_df = pd.read_csv("data/missing_labels.csv", index_col=False)
@@ -27,8 +19,7 @@ wallet_list = []
     
 def scrape_owner(address_df): 
     for index, row in address_df.iterrows():
-        address = row['address']
-        
+        address = row['address']        
         try:         
             url = "https://bitinfocharts.com/bitcoin/address/" + address              
             res = requests.get(url)    
@@ -47,8 +38,7 @@ def scrape_owner(address_df):
             print(url)
 
 
-for counter, address_df in enumerate(address_list):   
-    #proxy = find_working_proxy("https://bitinfocharts.com/")      
+for counter, address_df in enumerate(address_list):     
     print("--THREAD " + str(counter) + " STARTED")  
     thread_scrape_owner = threading.Thread(target=scrape_owner, args=(address_df))
     thread_scrape_owner.start()      
@@ -67,5 +57,5 @@ def remove_digits(address):
         return "unknown"
 
 wallets["owner"] = wallets["owner"].apply(remove_digits)
-walletsx = wallets[wallets['owner'] != 'unknown']
-walletsx.to_csv('wallets_bitinfocharts_missing.csv', index = False)
+wallets = wallets[wallets['owner'] != 'unknown']
+wallets.to_csv('wallets_bitinfocharts_missing.csv', index = False)

@@ -17,24 +17,20 @@ from itertools import cycle
 from sqlalchemy import create_engine 
 import importlib.util
 
-#SETUP
+#DB connection
 spec = importlib.util.spec_from_file_location("module.name", "C:/Users/David/Dropbox/Code/config.py")
 config = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(config)
-
 DB_CREDENTIALS = config.sqlalchemy_DATASTIG_CRYPTO  
 engine = create_engine(DB_CREDENTIALS)
 
+#proxies = pd.read_csv('proxies.txt', names=['ips'], header=None, index_col=False) #https://proxyscrape.com/free-proxy-list
+#proxies =  proxies.ips.values.tolist()
+proxies_used = []
 categories_names = ['Exchange', 'Pools', 'Services', 'Gambling', 'Historic']
 
-proxies = pd.read_csv('proxies.txt', names=['ips'], header=None, index_col=False) #https://proxyscrape.com/free-proxy-list
-proxies =  proxies.ips.values.tolist()
-proxies_used = []
 
-
-
-def scrape_owner(owner, category_name, proxy):      
-    #global df_all_wallets    
+def scrape_owner(owner, category_name, proxy):        
     url_pages = "https://www.walletexplorer.com/wallet/" + owner
     res, proxy = get_response(proxy, url_pages)
     res = requests.get(url_pages) 
@@ -66,7 +62,7 @@ def scrape_owner(owner, category_name, proxy):
             print(traceback.format_exc())
             break
        
-    print(">>>>>>>>>>>>" + owner + " " + str(page) + " finished<<<<<<<<<<<<<<")
+    print(">>>" + owner + " " + str(page) + " finished<<<")
     proxies_used.remove(proxy)
     
       
@@ -88,7 +84,7 @@ def get_proxies():
     
 
 def find_working_proxy(url):
-    #proxies = get_proxies()
+    proxies = get_proxies()
     proxy_pool = cycle(proxies)   
     found_proxy = False   
     
@@ -146,8 +142,3 @@ for counter, category in enumerate(categories_names):
         print("--THREAD " + str(counter) + "/" + str(len(owners_list)) + " STARTED " + owner + "--")  
         thread_scrape_owner = threading.Thread(target=scrape_owner, args=(owner, category_name, proxy))
         thread_scrape_owner.start()
-
-
-            
-        
- 
