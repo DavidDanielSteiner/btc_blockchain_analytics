@@ -1,5 +1,12 @@
 # -*- coding: utf-8 -*-
 """
+Created on Mon Nov 25 20:06:38 2019
+
+@author: nguye
+"""
+
+# -*- coding: utf-8 -*-
+"""
 Created on Mon Nov 25 17:58:31 2019
 
 @author: nguye
@@ -29,16 +36,16 @@ x_rand = np.random.randint(1,61,60)
 y_rand = np.random.randint(1,61,60)
 
 df = pd.read_csv("transactions_10MIO.csv")
+weight = df.btc*0.001
 
-"""weight = round(df.percent_marketcap,3)*1000
-labels = []
+"""labels = []
 for x in df.receiver_name:
     labels.append({'label':x,'value':x})
 labels.append({'label':'all','value':'all'})
 """
 ################################### handling date times for sliders
 
-daterange = pd.date_range(start=min([x for x in df['date']]),end=max([x for x in df['date']]))#,freq='Y')
+daterange = pd.date_range(start=min(df.date),end=max(df.date))#,freq='Y')
 
 def unixTimeMillis(dt):
     ''' Convert datetime to unix timestamp '''
@@ -48,7 +55,7 @@ def unixToDatetime(unix):
     ''' Convert unix timestamp to datetime. '''
     return pd.to_datetime(unix,unit='s')
 
-def getMarks(start, end, Nth=100):
+def getMarks(start, end, Nth=300):
     ''' Returns the marks for labeling. 
         Every Nth value will be used.
     '''
@@ -88,7 +95,16 @@ app.layout = html.Div([html.Div([html.H1("Wallet Explorer")], style={'textAlign'
                 marks=getMarks(daterange.min(),
                             daterange.max()),
         ),
-        
+        html.Br(),
+        html.Label('market capitalization'),
+        dcc.RangeSlider(
+            id = 'slider_balance',
+            min = min(weight),
+            max = max(weight),
+            value = [min(weight),max(weight)],
+            step = 10,
+            #marks = {i: i for i in range(max(df.weight))}
+        ),
         
         
         
@@ -105,25 +121,30 @@ app.layout = html.Div([html.Div([html.H1("Wallet Explorer")], style={'textAlign'
 
 @app.callback(
     dash.dependencies.Output('scatter_chart', 'figure'),
-    [dash.dependencies.Input('slider_date', 'value')],#,dash.dependencies.Input('slider_balance', 'value'),
+    [dash.dependencies.Input('slider_date', 'value'),dash.dependencies.Input('slider_balance', 'value')],
     #dash.dependencies.Input('dropdown_type','value')],
     
 )
 
 
-def update_date(value1):#, value2,value_type):
+def update_date(value1, value2): #,value_type):
     global df
+    df_filtered = df
     #df_filtered = df[df.receiver_name == value_type]
     #if value_type == 'all':
     #    df_filtered = df
-    df_filtered = df #df_filtered[(pd.to_datetime(df_filtered.date) < unixToDatetime(value1[1])) & (pd.to_datetime(df_filtered.date) > unixToDatetime(value1[0]))]
-    #df_filtered = df_filtered[(weight >= value2[0]) & (weight <= value2[1])]
+    df_filtered = df_filtered[(pd.to_datetime(df_filtered.date) < unixToDatetime(value1[1])) & (pd.to_datetime(df_filtered.date) > unixToDatetime(value1[0]))]
+    df_filtered = df_filtered[(weight >= value2[0]) & (weight <= value2[1])]
     fig = go.Figure()
     fig.add_trace(
         go.Scattergl(
-                 x = df_filtered.date,
+                 x = df_filtered.block_timestamp,
                     y = df_filtered.dollar,
                     mode = 'markers',
+                    marker= {'size': [x for x in weight[(weight >= value2[0]) & (weight <= value2[1])]],
+
+                            
+                    }
                 )
             )    
 
@@ -144,18 +165,9 @@ def update_date(value1):#, value2,value_type):
         
 
 if __name__ == "__main__":
-    app.run_server(port=5000)
+    app.run_server(port=8000)
 """    
-html.Br(),
-        html.Label('market capitalization'),
-        dcc.RangeSlider(
-            id = 'slider_balance',
-            min = min(weight),
-            max = max(weight),
-            value = [min(weight),max(weight)],
-            step = 10,
-            #marks = {i: i for i in range(max(df.weight))}
-        ),
+
 html.Br(),
 html.Label('select owner type'),
 dcc.Dropdown(
@@ -165,8 +177,8 @@ dcc.Dropdown(
 ),
 
 
-marker= {'size': [x for x in weight[(weight >= value2[0]) & (weight <= value2[1])]]}
-"""
 
+"""
+max(df.btc*0.001)
 
 #print(len(df.receiver_name.unique()))
