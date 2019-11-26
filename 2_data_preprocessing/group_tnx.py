@@ -36,6 +36,7 @@ def check_owner(x):
     else:
         return x
 
+
 def aggregate_most_common(df):
     df = df[['hash', 'owner']]
     tmp = df[df['owner'].isna()]
@@ -45,6 +46,7 @@ def aggregate_most_common(df):
     df = df.groupby(['hash'], as_index=False)['owner'].agg(pd.Series.mode) #https://stackoverflow.com/questions/15222754/groupby-pandas-dataframe-and-select-most-common-value
     df['owner'] = df['owner'].apply(check_owner)
     return df
+
 
 def group_transactions(df, unique=False):
     sender = df[['hash', 'sender_name']]
@@ -140,16 +142,28 @@ def get_missing_labels(df):
 labeled_wallets = pd.DataFrame()
 wallets = pd.read_csv("data/wallets.csv", index_col=False)  
 tnx = pd.read_csv("data/transactions_filtered_1MIO.csv", index_col=False)  
-columns = ['sender_name', 'sender_category', 'receiver_name', 'receiver_category', 'CapMrktCurUSD']
-tnx = tnx.drop(columns, axis=1)  
-    
-for i in range(10):
+tnx = tnx.drop(['sender_name', 'sender_category', 'receiver_name', 'receiver_category', 'CapMrktCurUSD'], axis=1)  
+
+#label all addresses within same transaction hash, if one address is labeled 
+for i in range(30):
     df = merge_tnx_wallets(tnx, wallets, labeled_wallets)
     df_grouped = group_transactions(df)
     labeled_wallets = labeled_wallets.append(regroup(df_grouped)).drop_duplicates(keep='last')
     print(len(labeled_wallets))
 
 
+#Merge with
+wallet_owners = wallets[['owner', 'category']].drop_duplicates(subset='owner', keep='last').reset_index(drop=True)
+labeled_tnx = add_category(wallet_owners, df)
+
+#Filter
+filtered_transactions = labeled_tnx[labeled_tnx['dollar'] >= 10000000]
+
+#Export
+filtered_transactions.to_csv("transactions_10MIO_2.csv", index=False)
+
+
+'''
 wallet_owners = wallets[['owner', 'category']].drop_duplicates(subset='owner', keep='last').reset_index(drop=True)
 labeled_tnx = add_category(wallet_owners, df)
 filtered_transactions = labeled_tnx[labeled_tnx['dollar'] >= 10000000]
@@ -164,7 +178,7 @@ sen = filtered_transactions[filtered_transactions['receiver_name'] == 'Kraken.co
 
 tmp = pd.merge(sen, wallets, left_on='sender', right_on='address', how="left")
 x = tmp[['hash', 'sender_name', 'owner', 'receiver_name']]
-
+'''
 
 
 

@@ -8,7 +8,7 @@ import pandas as pd
 
 def merge_data():   
     #import
-    btc_price_data = pd.read_csv("data/btc_price_data.csv") #https://coinmetrics.io/community-data-dictionary/   
+    btc_price_data = pd.read_csv("data/btc_price_data.csv") #https://coinmetrics.io/community-data-dictionary/   #https://coinmetrics.io/newdata/btc.csv
     tnx = pd.read_csv("data/transactions_over_500BTC.csv")
     wallets_1 = pd.read_csv("data/wallets_walletexplorer.csv", index_col=False)
     wallets_2 = pd.read_csv("data/wallets_bitinfocharts.csv", index_col=False)
@@ -24,6 +24,7 @@ def merge_data():
     
     #change specific owner and category values
     wallets.loc[wallets.owner == 'Xapo.com-2', 'owner'] = 'Xapo.com'
+    #wallets.loc[wallets.owner == 'Xapo.com', 'category'] = 'Service'
     wallets.loc[wallets.owner == 'Bitfinex.com', 'owner'] = 'Bitfinex'
     wallets.loc[wallets.owner == 'DPR Seized Coins 2', 'category'] = 'Service'
     wallets.loc[wallets.owner == 'F2Pool', 'category'] = 'Pools'
@@ -46,7 +47,9 @@ def merge_data():
     
     #Merge with price data
     btc_price_data = btc_price_data[['date', 'CapMrktCurUSD','PriceUSD']]
-    btc_price_data['date'] = pd.to_datetime(btc_price_data['date']).apply(lambda x: '{year}-{month}-{day}'.format(year=x.year, month=x.month, day=x.day))   
+    #btc_price_data['date'] = pd.to_datetime(btc_price_data['date']).apply(lambda x: '{year}-{month}-{day}'.format(year=x.year, month=x.month, day=x.day))   
+    btc_price_data['date'] = pd.to_datetime(btc_price_data['date'])
+        
     data = pd.merge(tnx_labeled, btc_price_data, on='date', how='inner')
     data['dollar'] = data['btc'] * data['PriceUSD']
     data['percent_marketcap'] = (data['dollar'] / data['CapMrktCurUSD']) *100
