@@ -36,7 +36,14 @@ x_rand = np.random.randint(1,61,60)
 y_rand = np.random.randint(1,61,60)
 
 df = pd.read_csv("transactions_10MIO.csv")
-weight = df.btc*0.001
+#weight = df.btc*0.001
+
+
+step = (max(df.btc)-min(df.btc))/10 #step
+add = round((df.btc - min(df.btc)) / step,0)
+df['point_size'] = add + 5 
+
+
 
 """labels = []
 for x in df.receiver_name:
@@ -99,9 +106,9 @@ app.layout = html.Div([html.Div([html.H1("Wallet Explorer")], style={'textAlign'
         html.Label('market capitalization'),
         dcc.RangeSlider(
             id = 'slider_balance',
-            min = min(weight),
-            max = max(weight),
-            value = [min(weight),max(weight)],
+            min = min(df.point_size),
+            max = max(df.point_size),
+            value = [min(df.point_size),max(df.point_size)],
             step = 10,
             #marks = {i: i for i in range(max(df.weight))}
         ),
@@ -134,14 +141,14 @@ def update_date(value1, value2): #,value_type):
     #if value_type == 'all':
     #    df_filtered = df
     df_filtered = df_filtered[(pd.to_datetime(df_filtered.date) < unixToDatetime(value1[1])) & (pd.to_datetime(df_filtered.date) > unixToDatetime(value1[0]))]
-    df_filtered = df_filtered[(weight >= value2[0]) & (weight <= value2[1])]
+    df_filtered = df_filtered[(df_filtered.point_size >= value2[0]) & (df_filtered.point_size <= value2[1])]
     fig = go.Figure()
     fig.add_trace(
         go.Scattergl(
                  x = df_filtered.block_timestamp,
                     y = df_filtered.dollar,
                     mode = 'markers',
-                    marker= {'size': [x for x in weight[(weight >= value2[0]) & (weight <= value2[1])]],
+                    marker= {'size': [x for x in df_filtered.point_size[(df_filtered.point_size >= value2[0]) & (df_filtered.point_size <= value2[1])]],
 
                             
                     }
@@ -179,6 +186,5 @@ dcc.Dropdown(
 
 
 """
-max(df.btc*0.001)
 
 #print(len(df.receiver_name.unique()))
