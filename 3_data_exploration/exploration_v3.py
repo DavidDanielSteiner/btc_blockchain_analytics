@@ -127,9 +127,9 @@ tmp2.columns = ['xx', 'first_tnx', 'last_tnx', 'receiver', 'category', 'sender',
 tmp3 = tmp1.join(tmp2, how='inner')
 tmp3 = tmp3.drop_duplicates(keep='last')
 tmp4 = tmp3[(tmp3['adr_per_tnx'] <= 100 ) & (tmp3['dollar_median'] < 20000000)] 
-tmp5 = tmp3[(tmp3['dollar_meadian'] <= 20000000)] 
+tmp5 = tmp3[(tmp3['dollar_median'] <= 20000000)] 
 #tmp3 = tmp3.dropna(subset=['receiver', 'x'])
-cluster = tmp4[['adr_per_tnx', 'dollar_meadian']]
+cluster = tmp3[['adr_per_tnx', 'dollar_meadian']]
 #cluster = tmp4[['adr_total', 'txns', 'adr_per_tnx','dollar_sum', 'dollar_mean','dollar_meadian', 'dollar_max']]
 
 plt.figure(figsize = (20,20))
