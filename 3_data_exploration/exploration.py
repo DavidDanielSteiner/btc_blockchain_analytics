@@ -40,7 +40,7 @@ tnx = tnx.fillna('unknown')
 #tnx['date'] = pd.to_datetime(tnx['block_timestamp']) 
 tnx['block_timestamp'] = pd.to_datetime(tnx['block_timestamp']) 
 tnx['date'] = pd.to_datetime(tnx['block_timestamp']).apply(lambda x: '{year}-{month}-{day}'.format(year=x.year, month=x.month, day=x.day))   
-tnx.sort_values(by=['date'], inplace=True, ascending=True)
+#tnx.sort_values(by=['date'], inplace=True, ascending=True)
 
 tnx.dtypes
 #sen = tnx[ (tnx['receiver_category'] == 'Exchange') | (tnx['sender_category'] == 'Exchange') ]
@@ -126,6 +126,10 @@ tmp1.columns = ['adr_total', 'txns', 'adr_per_tnx', 'x']
 tmp2.columns = ['xx', 'first_tnx', 'last_tnx', 'receiver', 'category', 'sender', 'dollar_sum', 'dollar_mean', 'dollar_median', 'dollar_max']
 tmp3 = tmp1.join(tmp2, how='inner')
 tmp3 = tmp3.drop_duplicates(keep='last')
+
+tmp3 = tmp3.reset_index(drop=True)
+tmp3.to_csv("cluster_data.csv", index='False')
+
 tmp4 = tmp3[(tmp3['adr_per_tnx'] <= 100 ) & (tmp3['dollar_median'] < 20000000)] 
 tmp5 = tmp3[(tmp3['dollar_median'] <= 20000000)] 
 #tmp3 = tmp3.dropna(subset=['receiver', 'x'])
