@@ -35,12 +35,10 @@ np.random.seed(50)
 x_rand = np.random.randint(1,61,60)
 y_rand = np.random.randint(1,61,60)
 
-df = pd.read_csv("transactions_10MIO.csv")
-#weight = df.btc*0.001
+df = pd.read_csv("Transactions_10MIO.csv")
 
-
-step = (max(df.btc)-min(df.btc))/10 #step
-add = round((df.btc - min(df.btc)) / step,0)
+step = (max(df.btc) - min(df.btc)) / 10 #step
+add = round((df.btc - min(df.btc)) / step, 0)
 df['point_size'] = add + 5 
 
 
@@ -50,8 +48,9 @@ for x in df.receiver_name:
     labels.append({'label':x,'value':x})
 labels.append({'label':'all','value':'all'})
 """
-################################### handling date times for sliders
-
+########################################################################
+# handling date times for sliders
+########################################################################
 daterange = pd.date_range(start=min(df.date),end=max(df.date))#,freq='Y')
 
 def unixTimeMillis(dt):
@@ -75,8 +74,9 @@ def getMarks(start, end, Nth=300):
 
     return result
 
-#####################################
-
+############################################################
+# Construction of Layout including plots
+############################################################
 app.layout = html.Div([html.Div([html.H1("Wallet Explorer")], style={'textAlign': "center"}),
     html.Div([
         html.Div(
@@ -125,6 +125,10 @@ app.layout = html.Div([html.Div([html.H1("Wallet Explorer")], style={'textAlign'
     style={'width': '50%','display': 'inline-block'},
     )]
 )
+                
+#################################################################
+# Callbacks for Interaction
+##################################################################
 
 @app.callback(
     dash.dependencies.Output('scatter_chart', 'figure'),
@@ -142,18 +146,23 @@ def update_date(value1, value2): #,value_type):
     #    df_filtered = df
     df_filtered = df_filtered[(pd.to_datetime(df_filtered.date) < unixToDatetime(value1[1])) & (pd.to_datetime(df_filtered.date) > unixToDatetime(value1[0]))]
     df_filtered = df_filtered[(df_filtered.point_size >= value2[0]) & (df_filtered.point_size <= value2[1])]
-    fig = go.Figure()
+    df_filtered.receiver_name[df_filtered.receiver_name.isnull()] = 'unknown'
+    receiver_id, receivers = pd.factorize(df_filtered.receiver_name)
+    fig = go.Figure(layout=go.Layout(
+        title=go.layout.Title(text="A Bar Chart")
+    ))
     fig.add_trace(
         go.Scattergl(
-                 x = df_filtered.block_timestamp,
+                    x = df_filtered.block_timestamp,
                     y = df_filtered.dollar,
+                    text = df_filtered.receiver,
                     mode = 'markers',
-                    marker= {'size': [x for x in df_filtered.point_size[(df_filtered.point_size >= value2[0]) & (df_filtered.point_size <= value2[1])]],
-
-                            
-                    }
-                )
-            )    
+                    #use sizescr, sizemode, sizeref
+                    marker_color = receiver_id,
+                    marker=  {'size': [x for x in df_filtered.point_size[(df_filtered.point_size >= value2[0]) & (df_filtered.point_size <= value2[1])]],},
+        ),
+        
+    )    
 
     
     """data = go.Scatter(
@@ -185,6 +194,15 @@ dcc.Dropdown(
 
 
 
-"""
 
+print(df[df.receiver_name.isnull()] = 'unknown')
+df[df.receiver_name.isnull()] = 'unknown'
+print(df.receiver_name.unique())
 #print(len(df.receiver_name.unique()))
+
+
+df.receiver_name[df.receiver_name.isnull()] = 'unknown'
+
+receiver_id, receivers = pd.factorize(df.receiver_name)
+
+"""
