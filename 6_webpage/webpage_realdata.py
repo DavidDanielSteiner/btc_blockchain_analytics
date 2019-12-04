@@ -4,20 +4,6 @@ Created on Mon Nov 25 20:06:38 2019
 
 @author: nguye
 """
-
-# -*- coding: utf-8 -*-
-"""
-Created on Mon Nov 25 17:58:31 2019
-
-@author: nguye
-"""
-
-# -*- coding: utf-8 -*-
-"""
-Created on Sun Nov  3 11:36:01 2019
-
-@author: nguye
-"""
 import dash
 import dash_core_components as dcc
 import dash_html_components as html
@@ -35,19 +21,20 @@ np.random.seed(50)
 x_rand = np.random.randint(1,61,60)
 y_rand = np.random.randint(1,61,60)
 
-df = pd.read_csv("Transactions_10MIO.csv")
+df = pd.read_csv("transactions_10MIO.csv")
 
+# handling the point size
+min_point_size = 5
 step = (max(df.btc) - min(df.btc)) / 10 #step
 add = round((df.btc - min(df.btc)) / step, 0)
-df['point_size'] = add + 5 
+df['point_size'] = min_point_size + add
 
-
-
-"""labels = []
-for x in df.receiver_name:
-    labels.append({'label':x,'value':x})
-labels.append({'label':'all','value':'all'})
-"""
+# options in dropdown for owner
+options = []
+for owner in df.receiver_name2.unique():
+    options.append({'label': owner, 'value': owner})
+options.append({'label':'all','value':'all'})
+    
 ########################################################################
 # handling date times for sliders
 ########################################################################
@@ -110,15 +97,15 @@ app.layout = html.Div([html.Div([html.H1("Wallet Explorer")], style={'textAlign'
             max = max(df.point_size),
             value = [min(df.point_size),max(df.point_size)],
             step = 10,
-            #marks = {i: i for i in range(max(df.weight))}
+            marks = {i: i for i in df.point_size}
         ),
-        
-        
-        
-        
-        
-        
-
+        html.Br(),
+        html.Label('select owner type'),
+        dcc.Dropdown(
+            id = 'dropdown_owner',
+            options = options,
+            value = 'all',
+        ),
         html.Div(id='output-container-range-slider'),
     ],
         # not spanning the entire screen
@@ -132,13 +119,13 @@ app.layout = html.Div([html.Div([html.H1("Wallet Explorer")], style={'textAlign'
 
 @app.callback(
     dash.dependencies.Output('scatter_chart', 'figure'),
-    [dash.dependencies.Input('slider_date', 'value'),dash.dependencies.Input('slider_balance', 'value')],
-    #dash.dependencies.Input('dropdown_type','value')],
+    [dash.dependencies.Input('slider_date', 'value'),dash.dependencies.Input('slider_balance', 'value'),
+    dash.dependencies.Input('dropdown_owner','value')],
     
 )
 
 
-def update_date(value1, value2): #,value_type):
+def update_date(value1, value2, value3): #,value_type):
     global df
     df_filtered = df
     #df_filtered = df[df.receiver_name == value_type]
@@ -146,11 +133,15 @@ def update_date(value1, value2): #,value_type):
     #    df_filtered = df
     df_filtered = df_filtered[(pd.to_datetime(df_filtered.date) < unixToDatetime(value1[1])) & (pd.to_datetime(df_filtered.date) > unixToDatetime(value1[0]))]
     df_filtered = df_filtered[(df_filtered.point_size >= value2[0]) & (df_filtered.point_size <= value2[1])]
-    df_filtered.receiver_name[df_filtered.receiver_name.isnull()] = 'unknown'
+    df_filtered.receiver_name[df_filtered.receiver_name.isnull()] = 'unknown' ####### maybe use receiver_name 2
     receiver_id, receivers = pd.factorize(df_filtered.receiver_name)
+    if value3 != 'all':
+        df_filtered = df_filtered[df_filtered.receiver_name2 == value3]####################### 
     fig = go.Figure(layout=go.Layout(
-        title=go.layout.Title(text="A Bar Chart")
-    ))
+        title=go.layout.Title(text="Transactions"),
+        xaxis = {'title' : 'Dollar'},
+        yaxis = {'title' : 'Date'},)
+    )
     fig.add_trace(
         go.Scattergl(
                     x = df_filtered.block_timestamp,
@@ -171,11 +162,7 @@ def update_date(value1, value2): #,value_type):
                     mode = 'markers',
                     ###
     )"""
-    layout = go.Layout(
-                        title = "Transactions",
-                        xaxis = {'title' : 'Dollar'},
-                        yaxis = {'title' : 'Date'},)
-    
+
     #fig=go.Figure(data=data, layout=layout)
     return fig#print('From {} to {}'.format(unixToDatetime(value1[0]),unixToDatetime(value1[1])),value1)
         
@@ -206,3 +193,5 @@ df.receiver_name[df.receiver_name.isnull()] = 'unknown'
 receiver_id, receivers = pd.factorize(df.receiver_name)
 
 """
+
+
