@@ -139,8 +139,8 @@ def update_date(value1, value2, value3): #,value_type):
         df_filtered = df_filtered[df_filtered.receiver_name2 == value3]####################### 
     fig = go.Figure(layout=go.Layout(
         title=go.layout.Title(text="Transactions"),
-        xaxis = {'title' : 'Dollar'},
-        yaxis = {'title' : 'Date'},)
+        xaxis = {'title' : 'timeline'},
+        yaxis = {'title' : 'dollar'},)
     )
     fig.add_trace(
         go.Scattergl(
@@ -154,16 +154,6 @@ def update_date(value1, value2, value3): #,value_type):
         ),
         
     )    
-
-    
-    """data = go.Scatter(
-                    x = df_filtered.date,
-                    y = df_filtered.dollar,
-                    mode = 'markers',
-                    ###
-    )"""
-
-    #fig=go.Figure(data=data, layout=layout)
     return fig#print('From {} to {}'.format(unixToDatetime(value1[0]),unixToDatetime(value1[1])),value1)
         
 
