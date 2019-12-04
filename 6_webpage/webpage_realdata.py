@@ -69,14 +69,6 @@ app.layout = html.Div([html.Div([html.H1("Wallet Explorer")], style={'textAlign'
         html.Div(
             dcc.Graph(
                 id='scatter_chart',
-                figure = {
-                    # kann eigl weg
-                    'data': go.Scatter(
-                    ),
-                    'layout' : go.Layout(
-                        
-                    )
-                }
             )
         ),
         html.Label('date'),
@@ -112,7 +104,8 @@ app.layout = html.Div([html.Div([html.H1("Wallet Explorer")], style={'textAlign'
     style={'width': '50%','display': 'inline-block'},
     )]
 )
-                
+        
+        
 #################################################################
 # Callbacks for Interaction
 ##################################################################
@@ -125,18 +118,14 @@ app.layout = html.Div([html.Div([html.H1("Wallet Explorer")], style={'textAlign'
 )
 
 
-def update_date(value1, value2, value3): #,value_type):
+def update_date(value1, value2, value3): 
     global df
     df_filtered = df
-    #df_filtered = df[df.receiver_name == value_type]
-    #if value_type == 'all':
-    #    df_filtered = df
     df_filtered = df_filtered[(pd.to_datetime(df_filtered.date) < unixToDatetime(value1[1])) & (pd.to_datetime(df_filtered.date) > unixToDatetime(value1[0]))]
     df_filtered = df_filtered[(df_filtered.point_size >= value2[0]) & (df_filtered.point_size <= value2[1])]
-    df_filtered.receiver_name[df_filtered.receiver_name.isnull()] = 'unknown' ####### maybe use receiver_name 2
-    receiver_id, receivers = pd.factorize(df_filtered.receiver_name)
+    receiver_id, receivers = pd.factorize(df_filtered.receiver_name2)
     if value3 != 'all':
-        df_filtered = df_filtered[df_filtered.receiver_name2 == value3]####################### 
+        df_filtered = df_filtered[df_filtered.receiver_name2 == value3] 
     fig = go.Figure(layout=go.Layout(
         title=go.layout.Title(text="Transactions"),
         xaxis = {'title' : 'timeline'},
@@ -148,40 +137,14 @@ def update_date(value1, value2, value3): #,value_type):
                     y = df_filtered.dollar,
                     text = df_filtered.receiver,
                     mode = 'markers',
-                    #use sizescr, sizemode, sizeref
+                    #alternative: use sizescr, sizemode, sizeref
                     marker_color = receiver_id,
                     marker=  {'size': [x for x in df_filtered.point_size[(df_filtered.point_size >= value2[0]) & (df_filtered.point_size <= value2[1])]],},
         ),
-        
     )    
-    return fig#print('From {} to {}'.format(unixToDatetime(value1[0]),unixToDatetime(value1[1])),value1)
+    return fig
         
 
 if __name__ == "__main__":
     app.run_server(port=8000)
-"""    
-
-html.Br(),
-html.Label('select owner type'),
-dcc.Dropdown(
-    id = 'dropdown_type',
-    options = labels,
-    value = 'all',
-),
-
-
-
-
-print(df[df.receiver_name.isnull()] = 'unknown')
-df[df.receiver_name.isnull()] = 'unknown'
-print(df.receiver_name.unique())
-#print(len(df.receiver_name.unique()))
-
-
-df.receiver_name[df.receiver_name.isnull()] = 'unknown'
-
-receiver_id, receivers = pd.factorize(df.receiver_name)
-
-"""
-
 
