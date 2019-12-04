@@ -5,17 +5,9 @@ Created on Mon Nov 25 16:44:34 2019
 @author: David
 """
 
-# -*- coding: utf-8 -*-
-"""
-Created on Mon Nov  16:44:34 2019
-
-@author: David
-"""
-
 import pandas as pd
 import random
 import string
-
 
 
 def randomString(x):
@@ -120,23 +112,6 @@ def merge_tnx_wallets(tnx, wallets, new_wallets):
     tnx_labeled = pd.merge(sender, receiver,  how='inner', on=['hash', 'block_timestamp', 'sender','receiver', 'date', 'btc', 'dollar', 'percent_marketcap', 'PriceUSD'])
  
     return tnx_labeled
-
-
-def get_missing_labels(df):
-    #get distinct addresses that have no label
-    sender = df[['sender', 'sender_name']]
-    sender = sender[sender['sender_name'].isna()]
-    sender.rename(columns = {"sender" : 'address'}, inplace = True) 
-    
-    receiver = df[['receiver', 'receiver_name']]
-    receiver = receiver[receiver['receiver_name'].isna()]
-    receiver.rename(columns = {"receiver" : 'address'}, inplace = True) 
-    
-    missing_labels = sender.append(receiver)
-    missing_labels = missing_labels[['address']]
-    missing_labels = missing_labels.drop_duplicates(keep='last')
-    
-    missing_labels.to_csv("missing_labels.csv", index = False)
 
 
 labeled_wallets = pd.DataFrame()
