@@ -11,10 +11,9 @@ import os
 import pandas as pd
 import matplotlib.pyplot as plt
 from google.cloud import bigquery #pip install google-cloud-bigquery
-import matplotlib.pyplot as plt 
+
 os.environ["GOOGLE_APPLICATION_CREDENTIALS"]=r"C:\Users\David\Dropbox\Code\Crypto-4c44e65fd97d.json" #https://cloud.google.com/docs/authentication/getting-started
 client = bigquery.Client() 
-
 
 
 # =============================================================================
@@ -45,7 +44,7 @@ def estimate_gigabytes_scanned(query, bq_client):
 # =============================================================================
 # Prepare Full Wallet Dataset for Binary Classification
 # =============================================================================
-def get_all_tnx(list_addresses):
+def get_all_tnx_from_address(list_addresses):
 #get transaction overview from list of wallets
 
     query = """
@@ -107,6 +106,7 @@ def get_all_tnx(list_addresses):
 
 def get_tnx_max_value(btc):    
     btc_satoshi = 100000000 #btc in satoshi    
+    satoshi_amount = btc * btc_satoshi
     
     query = """
     SELECT
@@ -118,50 +118,39 @@ def get_tnx_max_value(btc):
     FROM `bigquery-public-data.crypto_bitcoin.transactions`
         JOIN UNNEST (inputs) AS inputs
         JOIN UNNEST (outputs) AS outputs
-    WHERE outputs.value  >= 50000000000
+    WHERE outputs.value  >= @satoshis
         AND inputs.addresses IS NOT NULL
         AND outputs.addresses IS NOT NULL
     GROUP BY `hash`, block_timestamp, sender, receiver, value
     """
     
-    job_config = bigquery.QueryJobConfig()
-    query_job = client.query(query)
-    result = query_job.result()
-    large_transactions = result.to_dataframe()
-    large_transactions.to_csv("transactions_500BTC_2.csv", index=False)
+    #50000000000
+    #job_config = bigquery.QueryJobConfig()
+    #query_job = client.query(query)
+    #result = query_job.result()
+    #large_transactions = result.to_dataframe()
+    #large_transactions.to_csv("transactions_500BTC_2.csv", index=False)
     
-    
-    
-    satoshi_amount = 500 * btc_satoshi
+       
     query_params = [    
         bigquery.ScalarQueryParameter("satoshis", "INT64", satoshi_amount),
     ]
-    
-    
+     
     estimate_gigabytes_scanned(query, client)
     
     job_config = bigquery.QueryJobConfig()
     job_config.query_parameters = query_params
-    query_job = client.query(query)
+    query_job = client.query(
+            query,
+            job_config=job_config,
+    )
     result = query_job.result()
     
-    large_transactions = result.to_dataframe()
-    large_transactions.head()
-    
+    large_transactions = result.to_dataframe()       
     large_transactions.to_csv("transactions_50BTC.csv", index=False)
+    print("transactions saved to csv")
+    return large_transactions
 
 
-
-
-
-'''
-wallets = pd.read_sql_query('''SELECT * FROM wallets_raw WHERE category ='Exchange' Limit 100000''', engine) 
-wallets.to_csv("sample_exchanges_100k.csv", index=False)
-#wallets.to_csv("sample_other_100k.csv", index=False)
-
-wallets['category'].value_counts()
-wallets.loc[wallets['category'] != 'Exchange', 'category'] = 'Other'
-list_addresses =  wallets.address.values.tolist()
-#list_addresses = ['35hK24tcLEWcgNA4JxpvbkNkoAcDGqQPsP']
-
-'''
+transactions = get_tnx_max_value(50)  
+wallet_tnx = get_all_tnx_from_address(wallet_list)
