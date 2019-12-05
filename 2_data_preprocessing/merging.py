@@ -9,10 +9,11 @@ import pandas as pd
 def merge_data():   
     #import
     btc_price_data = pd.read_csv("data/btc_price_data.csv") #https://coinmetrics.io/community-data-dictionary/   #https://coinmetrics.io/newdata/btc.csv
-    tnx = pd.read_csv("data/transactions_50BTC.csv")
+    tnx = pd.read_csv("data/transactions_500BTC.csv")
     #tmp = tnx[tnx['value'] >= 100]
     #tnx = tmp
-    wallets_1 = pd.read_csv("data/wallets_walletexplorer.csv", index_col=False)
+    wallets_1 = pd.read_csv("data/wallets.csv", index_col=False)
+    #wallets_1 = pd.read_csv("data/wallets_walletexplorer.csv", index_col=False)
     #wallets_2 = pd.read_csv("data/wallets_bitinfocharts.csv", index_col=False)
     #wallets_3 = pd.read_csv("data/wallets_bitinfocharts_missing.csv", index_col=False)
     #wallets_4 = pd.read_csv("data/wallets_cryptoground.csv", index_col=False)
@@ -90,8 +91,10 @@ def get_unknown_wallets(df):
 
 data, wallets = merge_data()
 
-filtered_tnx = filter_data(data, filter_type = 'dollar', value=1000000)
+filtered_tnx = filter_data(data, filter_type = 'dollar', value=500000)
 filtered_tnx.to_csv("transactions_filtered_1MIO.csv", index=False)
 wallets.to_csv("wallets.csv", index=False)
 
 get_unknown_wallets(filtered_tnx)
+
+

@@ -12,14 +12,15 @@ from bs4 import BeautifulSoup
 import threading
 import time
 
-address_df = pd.read_csv("data/missing_labels.csv", index_col=False)
+address_df = pd.read_csv("data/unkown_wallets.csv", index_col=False)
 address_list = np.array_split(address_df, 200)
 wallet_list = []
     
     
-def scrape_owner(address_df): 
-    for index, row in address_df.iterrows():
-        address = row['address']        
+def scrape_owner(df): 
+    for index, row in df.iterrows():
+        address = row['address']   
+        
         try:         
             url = "https://bitinfocharts.com/bitcoin/address/" + address              
             res = requests.get(url)    
@@ -34,13 +35,11 @@ def scrape_owner(address_df):
             print("Appended wallet " + str(len(wallet_list)))
             time.sleep(2)
         except:
-            print("Error")
-            print(url)
+            print("Error:", url, sep=" ")
 
-
-for counter, address_df in enumerate(address_list):     
+for counter, df in enumerate(address_list):     
     print("--THREAD " + str(counter) + " STARTED")  
-    thread_scrape_owner = threading.Thread(target=scrape_owner, args=(address_df))
+    thread_scrape_owner = threading.Thread(target=scrape_owner, args=(df,))
     thread_scrape_owner.start()      
 
 
