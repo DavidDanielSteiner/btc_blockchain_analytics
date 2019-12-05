@@ -6,6 +6,8 @@ Created on Wed Nov 27 14:53:06 2019
 
 https://towardsdatascience.com/outlier-detection-with-one-class-svms-5403a1a1878c
 https://www.datacamp.com/community/tutorials/understanding-logistic-regression-python
+https://www.kaggle.com/amarnayak/once-class-svm-to-detect-anomaly
+http://rvlasveld.github.io/blog/2013/07/12/introduction-to-one-class-support-vector-machines/
 """
 
 import pandas as pd

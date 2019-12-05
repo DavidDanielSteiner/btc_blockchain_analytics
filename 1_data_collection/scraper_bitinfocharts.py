@@ -11,7 +11,6 @@ from bs4 import BeautifulSoup
 
 
 df_btc_wallets = pd.DataFrame()
-
 res = requests.get("https://bitinfocharts.com/top-100-richest-bitcoin-addresses.html")
 soup = BeautifulSoup(res.content,'lxml')
 

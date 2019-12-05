@@ -18,9 +18,8 @@ engine = create_engine(DB_CREDENTIALS)
 #wallets = pd.read_sql_query('''SELECT * FROM wallets_raw WHERE category ='Exchange' Limit 100''', engine) 
 #wallets.to_csv("sample_exchanges_100k.csv", index=False)
 
-def get_all_wallets_from_db():
-    wallets = pd.read_sql_query('''SELECT * FROM wallets_raw''', engine) 
-    return wallets
+wallets = pd.read_sql_query('''SELECT * FROM wallets_raw''', engine) 
+wallets.to_csv("wallets_walletexplorer.csv", index=False)
 
 #wallets['category'].value_counts()
 #wallets.loc[wallets['category'] != 'Exchange', 'category'] = 'Other'

@@ -47,7 +47,7 @@ for counter, address_df in enumerate(address_list):
 #Export to csv
 wallets = pd.DataFrame(wallet_list, columns = ['address', 'owner']) 
 wallets['category'] = 'Exchange' 
-wallets.to_csv('found_full.csv', index = False)
+wallets.to_csv('wallets_bitinfocharts_with_numbers.csv', index = False)
 
 def remove_digits(address): 
     numbers = sum(c.isdigit() for c in address)
@@ -58,4 +58,4 @@ def remove_digits(address):
 
 wallets["owner"] = wallets["owner"].apply(remove_digits)
 wallets = wallets[wallets['owner'] != 'unknown']
-wallets.to_csv('wallets_bitinfocharts_missing.csv', index = False)
+wallets.to_csv('wallets_bitinfochart_no_numbers.csv', index = False)

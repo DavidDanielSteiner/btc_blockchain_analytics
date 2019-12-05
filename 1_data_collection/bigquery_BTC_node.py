@@ -42,7 +42,7 @@ def estimate_gigabytes_scanned(query, bq_client):
 
 
 # =============================================================================
-# Prepare Full Wallet Dataset for Binary Classification
+# Prepare Full Wallet Dataset for Classification
 # =============================================================================
 def get_all_tnx_from_address(list_addresses):
 #get transaction overview from list of wallets
@@ -123,14 +123,6 @@ def get_tnx_max_value(btc):
         AND outputs.addresses IS NOT NULL
     GROUP BY `hash`, block_timestamp, sender, receiver, value
     """
-    
-    #50000000000
-    #job_config = bigquery.QueryJobConfig()
-    #query_job = client.query(query)
-    #result = query_job.result()
-    #large_transactions = result.to_dataframe()
-    #large_transactions.to_csv("transactions_500BTC_2.csv", index=False)
-    
        
     query_params = [    
         bigquery.ScalarQueryParameter("satoshis", "INT64", satoshi_amount),
@@ -151,6 +143,10 @@ def get_tnx_max_value(btc):
     print("transactions saved to csv")
     return large_transactions
 
+
+# =============================================================================
+# Start
+# =============================================================================
 
 transactions = get_tnx_max_value(50)  
 wallet_tnx = get_all_tnx_from_address(wallet_list)
