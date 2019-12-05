@@ -15,13 +15,18 @@ import pandas as pd
 import plotly.express as px
 import time
 
-app = dash.Dash()
+# embedding CCS file
+external_stylesheets = ['assets/style.css']
+app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
 
+#app.css.append_css({
+ #       'external_url': 'style.css',
+#})
 np.random.seed(50)
 x_rand = np.random.randint(1,61,60)
 y_rand = np.random.randint(1,61,60)
 
-df = pd.read_csv("transactions_10MIO.csv")
+df = pd.read_csv("testdata2.csv")
 
 # handling the point size
 min_point_size = 5
@@ -65,45 +70,55 @@ def getMarks(start, end, Nth=300):
 ############################################################
 # Construction of Layout including plots
 ############################################################
-app.layout = html.Div([html.Div([html.H1("Wallet Explorer")], style={'textAlign': "center"}),
-    html.Div([
+    #put header oitside div
+app.layout = html.Div([
+        html.Header("Wallet Explorer"),
+    #html.Div([
+        html.Div([
+            html.Br(),
+            html.Br(),
+            html.H2('Filters'),
+            html.Label('date'),
+            dcc.RangeSlider(
+                    id='slider_date',
+                    min = unixTimeMillis(daterange.min()),
+                    max = unixTimeMillis(daterange.max()),
+                    value = [unixTimeMillis(daterange.min()),
+                             unixTimeMillis(daterange.max())],
+                    marks=getMarks(daterange.min(),
+                                daterange.max()),
+            ),
+            html.Br(),
+            html.Label('market capitalization'),
+            dcc.RangeSlider(
+                id = 'slider_balance',
+                min = min(df.point_size),
+                max = max(df.point_size),
+                value = [min(df.point_size),max(df.point_size)],
+                step = 10,
+                marks = {i: i for i in df.point_size}
+            ),
+            html.Br(),
+            html.Label('select owner type'),
+            dcc.Dropdown(
+                id = 'dropdown_owner',
+                options = options,
+                value = 'all',
+            ),html.Div(id= 'filters'),
+        ],  #style = {'width': '100%','display': 'inline-block',}
+        ),
         html.Div(
             dcc.Graph(
                 id='scatter_chart',
             )
         ),
-        html.Label('date'),
-        dcc.RangeSlider(
-                id='slider_date',
-                min = unixTimeMillis(daterange.min()),
-                max = unixTimeMillis(daterange.max()),
-                value = [unixTimeMillis(daterange.min()),
-                         unixTimeMillis(daterange.max())],
-                marks=getMarks(daterange.min(),
-                            daterange.max()),
-        ),
-        html.Br(),
-        html.Label('market capitalization'),
-        dcc.RangeSlider(
-            id = 'slider_balance',
-            min = min(df.point_size),
-            max = max(df.point_size),
-            value = [min(df.point_size),max(df.point_size)],
-            step = 10,
-            marks = {i: i for i in df.point_size}
-        ),
-        html.Br(),
-        html.Label('select owner type'),
-        dcc.Dropdown(
-            id = 'dropdown_owner',
-            options = options,
-            value = 'all',
-        ),
-        html.Div(id='output-container-range-slider'),
-    ],
+    #],
         # not spanning the entire screen
-    style={'width': '50%','display': 'inline-block'},
-    )]
+    #style = {'width': '100%','display': 'inline-block', 'font-family': 'Calibri',},
+    
+    #)
+    ]
+                
 )
         
         
@@ -146,6 +161,8 @@ def update_date(value1, value2, value3):
     return fig
         
 
+
 if __name__ == "__main__":
     app.run_server(port=8000)
+
 
