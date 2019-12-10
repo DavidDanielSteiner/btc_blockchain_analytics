@@ -4,9 +4,7 @@ Created on Mon Nov 18 20:57:26 2019
 
 @author: David
 
-https://towardsdatascience.com/data-science-43c246d4eebc
-https://www.shanelynn.ie/summarising-aggregation-and-grouping-data-in-python-pandas/
-https://dfrieds.com/data-analysis/groupby-python-pandas
+
 """
 
 import pandas as pd
@@ -19,11 +17,22 @@ import matplotlib.pyplot as plt
 
 wallets = pd.read_csv("data/wallets.csv", index_col=False)
 
-sns.countplot(x='category', data=wallets) 
 
+#Addresses per category
+fig, ax = plt.subplots()
+graph = sns.countplot(x='category', data=wallets)
+plt.title('Labeled addresses per category')
+graph.set_xticklabels(graph.get_xticklabels(),rotation=90)
+for p in graph.patches:
+    height = p.get_height()
+    graph.text(p.get_x()+p.get_width()/2., height + 0.1,height ,ha="center")
+plt.savefig('addresses_labeled_category.png', transparent=True)
+
+#Addresses per owner
 plt.figure(figsize = (15,40))
 order = wallets['address'].value_counts(ascending=False).index
 sns.countplot(y='owner', data=wallets, order = order) 
+
 
 
 
@@ -33,7 +42,7 @@ sns.countplot(y='owner', data=wallets, order = order)
 
 #filter_tnx = tnx[tnx['hash'] == '55454a47565f17cb29d96a78645ed44e089d4701a1d6c1c537441a2b205c9edf']
 
-tnx = pd.read_csv("data/transactions_10MIO_3.csv", index_col=False)
+tnx = pd.read_csv("data/transactions_10MIO.csv", index_col=False)
 tnx["btc"] = tnx["btc"].astype(int)
 tnx["dollar"] = tnx["dollar"].astype(int)
 tnx = tnx.fillna('unknown')    

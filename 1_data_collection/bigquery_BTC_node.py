@@ -15,7 +15,6 @@ from google.cloud import bigquery #pip install google-cloud-bigquery
 os.environ["GOOGLE_APPLICATION_CREDENTIALS"]=r"C:\Users\David\Dropbox\Code\Crypto-4c44e65fd97d.json" #https://cloud.google.com/docs/authentication/getting-started
 client = bigquery.Client() 
 
-
 # =============================================================================
 # Helpers
 # =============================================================================

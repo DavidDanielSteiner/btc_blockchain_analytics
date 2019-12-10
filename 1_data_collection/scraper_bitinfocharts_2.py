@@ -12,7 +12,7 @@ from bs4 import BeautifulSoup
 import threading
 import time
 
-address_df = pd.read_csv("data/unkown_wallets.csv", index_col=False)
+address_df = pd.read_csv("data/unkown_wallets_2.csv", index_col=False)
 address_list = np.array_split(address_df, 200)
 wallet_list = []
     
