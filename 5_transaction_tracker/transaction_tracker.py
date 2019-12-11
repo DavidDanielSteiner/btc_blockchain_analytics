@@ -17,8 +17,6 @@ import threading
 import pandas as pd
 
 
-
-
 # =============================================================================
 # DB
 # =============================================================================
@@ -28,7 +26,6 @@ spec = importlib.util.spec_from_file_location("module.name", "C:/users/config.py
 config = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(config)
 DB_CREDENTIALS = config.DB_DATASTIG_CRYPTO 
-
 
 
 import mysql.connector
@@ -41,14 +38,6 @@ def connect():
         return cursor, connection              
     except Error as e:
         print("Error while connecting to MySQL", e)
-
-
-
-
-
-
-
-
 
 
 
@@ -142,16 +131,11 @@ def save_to_db(btc_value, dollar_value,transaction_hash,sender_address,receiver_
 
 
     
-    
-
-
 thread_btc_price_ticker = threading.Thread(target=run_btc_price_ticker)
 thread_transactions = threading.Thread(target=run_transactions)
 
 thread_btc_price_ticker.start()
 thread_transactions.start()
-
-
 
 
 
