@@ -1,42 +1,50 @@
 /*external CSS file*/
+body{
+	
+}
+/*funzt*/
 div{
-    background-color: blue;
-	width: 100%;
-		font-family: Tahoma;
-
-
-}
-
+	width: 90%; /* 100 % does not show the dropdown*/
+	font-family: Tahoma;
+	display: inline-block;
+	padding: 5px 5px 5px 5px;
 
 }
-div div {
+
+/*funktioniert
+div div { 
 	background-color: red;
-	width: 40%;
+	width: 80%;
 	display: inline-block;
-	background-color: yellow;
 	color: grey;
-}
+}*/
 
-div{
-}
-}body{
-    background-color: green;
-    font-family: Arial;
-}
-div header{
-	display: inline-block;
-
-	color: yellow;
+/*funktioniert, nur mittige ausrichtung nicht
+display: inline-block;
+line-height: 70px;*/
+header {	
+	font-size: 40px;
 	text-align: center;
 	vertical-align: middle;
-	line-height: 70px; 
-	font-size: 40px;
-	background-color: grey;
-	position: absolute;
+	line-height: 90px;  
+	
+	
 }
-/*#filters{ 
-	width: 40%;
+/*not working
+#filters{ 
+	width: 100%;
 	display: inline-block;
-	background-color: yellow;
+	background-color: orange;
 	color: yellow;
 }*/
+.container{
+	height:100vh; 
+	
+	display: grid; 
+	grid-template-rows:200px 800px 100px; 
+	grid-template-columns:30% 55% 15%; 
+	/*grid-auto-flow: column;*/
+}
+.scatter{
+	padding: 40px;
+}
