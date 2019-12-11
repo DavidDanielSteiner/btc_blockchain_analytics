@@ -172,7 +172,7 @@ for p in graph.patches:
 plt.savefig('transaction_types.png', transparent=True)
 '''
 
-
+#Time series by transaction type
 price = pd.read_csv("data/btc_price_data.csv") #https://coinmetrics.io/community-data-dictionary/   #https://coinmetrics.io/newdata/btc.csv
 price['date'] = pd.to_datetime(price['date'])
 price.set_index('date', inplace=True)
@@ -265,7 +265,7 @@ plt.xlabel('Number of Axles')
 
 #self_transactions = pd.merge(tmp2, tnx, left_index=True, right_on='hash')
 #self_transactions = tnx.drop_duplicates('hash', keep='last')
-'''
+
 
 date_start = '2017-11-01'
 date_end = '2018-04-01'
@@ -281,17 +281,7 @@ def prepare_for_plot(df, category):
     
     #df.plot(figsize=(16, 8))
     return df
-
-
-
-
-
-
-
-# =============================================================================
-# Price Data
-# =============================================================================
-
+'''
 
 
 
