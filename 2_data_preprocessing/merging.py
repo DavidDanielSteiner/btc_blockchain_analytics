@@ -30,6 +30,9 @@ def merge_data():
     wallets.loc[wallets.owner == 'Bitfinex.com', 'owner'] = 'Bitfinex'
     wallets.loc[wallets.owner == 'DPR Seized Coins 2', 'category'] = 'Service'
     wallets.loc[wallets.owner == 'F2Pool', 'category'] = 'Pools'
+    wallets.loc[wallets.owner == 'HaoBTC.com', 'category'] = 'Exchange'
+    wallets.loc[wallets.owner == 'Xapo.com', 'category'] = 'Exchange'
+    
 
     #Preprocess transactions
     tnx['date'] = pd.to_datetime(tnx['block_timestamp']).apply(lambda x: '{year}-{month}-{day}'.format(year=x.year, month=x.month, day=x.day))
@@ -79,10 +82,9 @@ def get_unknown_wallets(df):
     
     missing_labels = sender.append(receiver)
     missing_labels = missing_labels[['address']]
-    missing_labels = missing_labels.drop_duplicates(keep='last')
-    
-    missing_labels.to_csv("unkown_wallets.csv", index = False)
-    print("saved unknown wallets as csv")
+    missing_labels = missing_labels.drop_duplicates(keep='last')    
+    return missing_labels
+
 
 
 # =============================================================================
@@ -91,10 +93,10 @@ def get_unknown_wallets(df):
 
 data, wallets = merge_data()
 
-filtered_tnx = filter_data(data, filter_type = 'dollar', value=500000)
-filtered_tnx.to_csv("transactions_filtered_1MIO.csv", index=False)
+filtered_tnx = filter_data(data, filter_type = 'dollar', value=100000)
+filtered_tnx.to_csv("transactions_filtered_10MIO.csv", index=False)
 wallets.to_csv("wallets.csv", index=False)
 
-get_unknown_wallets(filtered_tnx)
-
+unknown_wallets = get_unknown_wallets(filtered_tnx)
+unknown_wallets.to_csv("unkown_wallets.csv", index = False)
 

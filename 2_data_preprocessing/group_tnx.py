@@ -116,7 +116,7 @@ def merge_tnx_wallets(tnx, wallets, new_wallets):
 
 labeled_wallets = pd.DataFrame()
 wallets = pd.read_csv("data/wallets.csv", index_col=False)  
-tnx = pd.read_csv("data/transactions_filtered_1MIO.csv", index_col=False)  
+tnx = pd.read_csv("data/transactions_filtered_10MIO.csv", index_col=False)  
 tnx = tnx.drop(['sender_name', 'sender_category', 'receiver_name', 'receiver_category', 'CapMrktCurUSD'], axis=1)  
 
 #label all addresses within same transaction hash, if one address is labeled 
@@ -135,7 +135,7 @@ labeled_tnx = add_category(wallet_owners, df)
 filtered_transactions = labeled_tnx[labeled_tnx['dollar'] >= 10000000]
 
 #Export
-filtered_transactions.to_csv("transactions_10MIO_2.csv", index=False)
+filtered_transactions.to_csv("transactions_10MIO.csv", index=False)
 
 
 '''
@@ -150,7 +150,6 @@ sen = filtered_transactions[filtered_transactions['receiver_name'] == 'Kraken.co
 #df_unique.rename(columns = {"block_timestamp" : 'date', 'dollar':'usd'}, inplace = True) 
 #df_unique = df_unique[['hash', 'date', 'btc', 'usd', 'sender_name', 'sender_category', 'receiver_name', 'receiver_category' ]]
 #df_unique.to_csv("transactions_unique_10MIO.csv", index=False)
-
 tmp = pd.merge(sen, wallets, left_on='sender', right_on='address', how="left")
 x = tmp[['hash', 'sender_name', 'owner', 'receiver_name']]
 '''

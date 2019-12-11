@@ -152,10 +152,10 @@ def prepare_for_plot(df, category):
     #df.plot(figsize=(16, 8))
     return df
     
-exchange_exchange = prepare_for_plot(exchange_exchange, 'exchange_exchange')
-other_exchange = prepare_for_plot(other_exchange, 'unknown_exchange')
-exchange_other = prepare_for_plot(exchange_other, 'exchange_unknown')
-other_other = prepare_for_plot(other_other, 'unknown_unkown')
+exchange_exchange = prepare_for_plot(exchange_exchange, 'exc_exc')
+other_exchange = prepare_for_plot(other_exchange, 'unk_exc')
+exchange_other = prepare_for_plot(exchange_other, 'exc_unk')
+other_other = prepare_for_plot(other_other, 'unk_unk')
 all_tnx = prepare_for_plot(tmp, 'all')
 
 tnx_category = pd.concat([exchange_exchange, other_exchange, exchange_other, other_other])
@@ -164,8 +164,8 @@ tnx_category = pd.concat([exchange_exchange, other_exchange, exchange_other, oth
 '''
 fig, ax = plt.subplots()
 graph = sns.countplot(x='category', data=tnx_category)
-plt.title('Transactions per transaction-category')
-graph.set_xticklabels(graph.get_xticklabels(),rotation=90)
+plt.title('Transactions per transaction category')
+graph.set_xticklabels(graph.get_xticklabels())
 for p in graph.patches:
     height = p.get_height()
     graph.text(p.get_x()+p.get_width()/2., height + 0.1,height ,ha="center")
@@ -185,7 +185,9 @@ price_2.set_index('date', inplace=True)
 price = price.join(price_2)
 price = price.loc[date_start:date_end]
 
-plt.figure(figsize=(30,20))
+
+#Time Series Chart
+plt.figure(figsize=(15,20))
 price_top = plt.subplot2grid((10,4), (0, 0), rowspan=2, colspan=4)
 volatility = plt.subplot2grid((10,4), (2, 0), rowspan=1, colspan=4)
 change_daily = plt.subplot2grid((10,4), (3, 0), rowspan=1, colspan=4)
@@ -204,7 +206,6 @@ tnx_vol_2.bar(exchange_other.index, exchange_other['dollar'])
 tnx_vol_3.bar(other_other.index, other_other['dollar']) 
 tnx_vol_4.bar(exchange_exchange.index, exchange_exchange['dollar']) 
  
-price_top.axes.get_xaxis().set_visible(False)
 price_top.set_title('BTC transactions per category')
 price_top.set_ylabel('Closing Price')
 volatility.set_ylabel('Daily Volatility')
@@ -214,7 +215,14 @@ tnx_vol_2.set_ylabel('exchange_unknown')
 tnx_vol_3.set_ylabel('unknown_unknown')
 tnx_vol_4.set_ylabel('exchange_exchange')
 
+change_daily.axes.get_xaxis().set_visible(False)
+volatility.axes.get_xaxis().set_visible(False)
+tnx_vol_1.axes.get_xaxis().set_visible(False)
+tnx_vol_2.axes.get_xaxis().set_visible(False)
+tnx_vol_3.axes.get_xaxis().set_visible(False)
+
 plt.savefig('transaction_types_chart.png', transparent=True)  
+
 
 
 #scatterplot by transaction type
