@@ -145,10 +145,10 @@ all_days = pd.date_range(date_start, date_end, freq='D')
 
 def prepare_for_plot(df, category):
     df['date'] = pd.to_datetime(df['date'])
-    df = df.groupby('date').sum()
+    #df = df.groupby('date').sum()
     #df = df[df['dollar'] < 50000000000] #remove outliers
     df['category'] = category    
-    df = df.reindex(all_days)
+    #df = df.reindex(all_days)
     #df.plot(figsize=(16, 8))
     return df
     
@@ -161,7 +161,7 @@ all_tnx = prepare_for_plot(tmp, 'all')
 tnx_category = pd.concat([exchange_exchange, other_exchange, exchange_other, other_other])
     
 #Addresses per category
-'''
+
 fig, ax = plt.subplots()
 graph = sns.countplot(x='category', data=tnx_category)
 plt.title('Transactions per transaction category')
@@ -170,7 +170,7 @@ for p in graph.patches:
     height = p.get_height()
     graph.text(p.get_x()+p.get_width()/2., height + 0.1,height ,ha="center")
 plt.savefig('transaction_types.png', transparent=True)
-'''
+
 
 #Time series by transaction type
 price = pd.read_csv("data/btc_price_data.csv") #https://coinmetrics.io/community-data-dictionary/   #https://coinmetrics.io/newdata/btc.csv

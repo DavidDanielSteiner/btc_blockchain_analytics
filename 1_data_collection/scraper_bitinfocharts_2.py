@@ -13,9 +13,8 @@ import threading
 import time
 
 address_df = pd.read_csv("data/unkown_wallets_2.csv", index_col=False)
-address_list = np.array_split(address_df, 200)
+address_list = np.array_split(address_df, 100)
 wallet_list = []
-    
     
 def scrape_owner(df): 
     for index, row in df.iterrows():
@@ -36,6 +35,7 @@ def scrape_owner(df):
             time.sleep(2)
         except:
             print("Error:", url, sep=" ")
+            
 
 for counter, df in enumerate(address_list):     
     print("--THREAD " + str(counter) + " STARTED")  
