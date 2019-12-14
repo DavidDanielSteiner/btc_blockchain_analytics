@@ -13,7 +13,13 @@ import threading
 import time
 
 address_df = pd.read_csv("data/unkown_wallets_2.csv", index_col=False)
+address_1 = pd.read_csv("data/wallets_bitinfocharts_with_numbers_1.csv", index_col=False)
+address_2 = pd.read_csv("data/wallets_bitinfocharts_with_numbers_2.csv", index_col=False)
+address_1 =address_1.append(address_2)
+common = address_df.merge(address_1,on=['address'])
+address_df = address_df[(~address_df.address.isin(common.address))]
 address_list = np.array_split(address_df, 100)
+
 wallet_list = []
     
 def scrape_owner(df): 
