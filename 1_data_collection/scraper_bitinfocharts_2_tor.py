@@ -13,86 +13,69 @@ import threading
 import time
 from itertools import cycle
 import random
-
-# =============================================================================
-# Proxies
-# =============================================================================
-proxies = pd.read_csv('proxies.txt', names=['ips'], header=None, index_col=False) #https://proxyscrape.com/free-proxy-list
-proxies =  proxies.ips.values.tolist()
-random.shuffle(proxies)
-proxies_used = []
-
-def find_working_proxy(url):
-    proxy_pool = cycle(proxies)   
-    found_proxy = False   
-    
-    while found_proxy == False: 
-            test_proxy = next(proxy_pool)
-            if test_proxy not in proxies_used:
-                proxies_used.append(test_proxy)   
-                print(len(proxies_used), "/" ,len(proxies), " proxies used", sep ="")
-                try:     
-                    res = requests.get(url, proxies={"http": test_proxy, "https": test_proxy})    
-                    print(test_proxy + " connected")
-                    found_proxy = True
-                    return res, test_proxy
-                except:
-                    print(test_proxy + " not working. Skipping")                       
-
-
-def get_response(proxy, url):
-    found_proxy = False
-    while found_proxy == False:    
-        try:                   
-            res = requests.get(url, proxies={"http": proxy, "https": proxy}) 
-            found_proxy = True
-            return res, proxy
-        except:
-            print("connection error")
-            res, proxy = find_working_proxy(url)
-            return res, proxy    
-
+from torrequest import TorRequest #for windows https://github.com/erdiaker/torrequest/issues/2
+import random
 
 
 # =============================================================================
 # Scraper
 # =============================================================================
             
-address_df = pd.read_csv("data/unkown_wallets_2.csv", index_col=False)
-address_list = np.array_split(address_df, 100)
+address_df = pd.read_csv("data/unkown_wallets.csv", index_col=False)
+address_1 = pd.read_csv("data/wallets_bitinfocharts_with_numbers_1.csv", index_col=False)
+address_2 = pd.read_csv("data/wallets_bitinfocharts_with_numbers_2.csv", index_col=False)
+address_3 = pd.read_csv("data/wallets_bitinfocharts_with_numbers_3.csv", index_col=False)
+address_4 = pd.read_csv("data/wallets_bitinfocharts_with_numbers_4.csv", index_col=False)
+address_1 =address_1.append(address_2)
+address_1 =address_1.append(address_3)
+address_1 =address_1.append(address_4)
+common = address_df.merge(address_1,on=['address'])
+address_df = address_df[(~address_df.address.isin(common.address))]
+
+address_list = np.array_split(address_df, 200)
 wallet_list = []
+proxy_list = []
+
+
+
     
-def scrape_owner(df, proxy): 
-    for index, row in df.iterrows():
-        address = row['address']   
+def scrape_owner(df): 
+    with TorRequest(proxy_port=9050, ctrl_port=9051, password=None) as tr:              
+        resp = tr.get('https://bitinfocharts.com/')
+        #print(resp.text)
         
-        try:         
-            
-            url = "https://bitinfocharts.com/bitcoin/address/" + address              
-            res, proxy = get_response(proxy, url)
-            #res = requests.get(url)    
-            soup = BeautifulSoup(res.content,'lxml')
-            
-            table = soup.find_all('table')[1]
-            df = pd.read_html(str(table))[0]
-            owner = df.iloc[0,3]
-            owner = owner.replace('wallet:', ' ').strip()
-            
-            wallet_list.append([address, owner])
-            print("Appended wallet " + str(len(wallet_list)))
-            #time.sleep(2)
-        except:
-            print("Error:", url, sep=" ")
+        resp = tr.get('http://ipecho.net/plain')
+        proxy = resp.text
+        print(proxy)
+        proxy_list.append(proxy)
+        tr.reset_identity() 
+    
+        for index, row in df.iterrows():
+            address = row['address']         
+            try:    
+                url = "https://bitinfocharts.com/bitcoin/address/" + address  
+                res = tr.get(url)             
+                soup = BeautifulSoup(res.content,'lxml')               
+                table = soup.find_all('table')[1]
+                df = pd.read_html(str(table))[0]
+                owner = df.iloc[0,3]
+                owner = owner.replace('wallet:', ' ').strip()
+                
+                wallet_list.append([address, owner])
+                print("Appended wallet " + str(len(wallet_list)) + " (" + proxy + ")")
+                time.sleep(random.uniform(5, 100))
+            except:
+                print("Error:", url, sep=" ")
+                time.sleep(random.uniform(1000, 5000))
             
     print(">>>finished<<<")
-    proxies_used.remove(proxy)
             
 
 for counter, df in enumerate(address_list):   
-    res, proxy = find_working_proxy("https://bitinfocharts.com/bitcoin/")
     print("--THREAD " + str(counter) + " STARTED")  
-    thread_scrape_owner = threading.Thread(target=scrape_owner, args=(df, proxy))
+    thread_scrape_owner = threading.Thread(target=scrape_owner, args=(df,))
     thread_scrape_owner.start()      
+    time.sleep(random.uniform(10, 30))
 
 
 
@@ -101,7 +84,7 @@ for counter, df in enumerate(address_list):
 # =============================================================================
 wallets = pd.DataFrame(wallet_list, columns = ['address', 'owner']) 
 wallets['category'] = 'Exchange' 
-wallets.to_csv('wallets_bitinfocharts_with_numbers.csv', index = False)
+wallets.to_csv('wallets_bitinfocharts_with_numbers_3.csv', index = False)
 
 def remove_digits(address): 
     numbers = sum(c.isdigit() for c in address)
