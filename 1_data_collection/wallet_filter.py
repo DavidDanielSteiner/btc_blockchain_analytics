@@ -9,6 +9,13 @@ import pandas as pd
 
 wallets = pd.DataFrame()
 
+# =============================================================================
+# Data Sources
+# =============================================================================
+df = pd.read_csv("data/offchain.csv", index_col=False)
+df = df[df['class'] == 'Mixer' ]
+wallets = wallets.append(df)
+
 df = pd.read_csv("data/wallets_walletexplorer.csv", index_col=False)
 wallets = wallets.append(df)
 

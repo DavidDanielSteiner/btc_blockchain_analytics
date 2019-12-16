@@ -35,9 +35,6 @@ address_df = address_df[(~address_df.address.isin(common.address))]
 address_list = np.array_split(address_df, 200)
 wallet_list = []
 proxy_list = []
-
-
-
     
 def scrape_owner(df): 
     with TorRequest(proxy_port=9050, ctrl_port=9051, password=None) as tr:              
@@ -63,10 +60,10 @@ def scrape_owner(df):
                 
                 wallet_list.append([address, owner])
                 print("Appended wallet " + str(len(wallet_list)) + " (" + proxy + ")")
-                time.sleep(random.uniform(5, 100))
+                time.sleep(random.uniform(1, 2))
             except:
                 print("Error:", url, sep=" ")
-                time.sleep(random.uniform(1000, 5000))
+                time.sleep(random.uniform(1,10))
             
     print(">>>finished<<<")
             
@@ -75,7 +72,7 @@ for counter, df in enumerate(address_list):
     print("--THREAD " + str(counter) + " STARTED")  
     thread_scrape_owner = threading.Thread(target=scrape_owner, args=(df,))
     thread_scrape_owner.start()      
-    time.sleep(random.uniform(10, 30))
+    time.sleep(random.uniform(5, 10))
 
 
 
