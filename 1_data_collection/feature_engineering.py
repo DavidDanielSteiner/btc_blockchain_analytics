@@ -7,11 +7,11 @@ Created on Mon Dec 16 14:49:53 2019
 
 import pandas as pd
 
-
 def feature_engineering(df):
     df = df.sort_values('block_number')    
     df = df.reset_index(drop=True)
     
+    df['block_timestamp'] = pd.to_datetime(df['block_timestamp'])
     df["value_btc"] = pd.to_numeric(df["value_btc"])
     df["tx_value_btc"] = pd.to_numeric(df["tx_value_btc"])
     df['balance_btc'] = 0.0
@@ -30,7 +30,6 @@ def feature_engineering(df):
         df.at[index,'balance_btc'] = balance
      
     #Add Dollar Price 
-    btc_price_data = pd.read_csv("data/btc_price_data.csv")
     btc_price_data = btc_price_data[['date', 'CapMrktCurUSD','PriceUSD']]
     btc_price_data['date'] = pd.to_datetime(btc_price_data['date']).apply(lambda x: '{year}-{month}-{day}'.format(year=x.year, month=x.month, day=x.day))  
     
@@ -121,10 +120,13 @@ offchain = offchain.dropna(subset=['class'])
 list_addresses = offchain['address'].to_list()
 
 
+
+btc_price_data = pd.read_csv("data/btc_price_data.csv")
 all_tnx = pd.read_csv("data/testdata_30k.csv", index_col=False)
 addresses = all_tnx.drop_duplicates(subset='address')['address'].to_list()
 
 df_features = pd.DataFrame()
+all_tnx.dtypes
 
 for address in addresses:
     df = all_tnx[all_tnx['address'] == address]
@@ -135,5 +137,5 @@ for address in addresses:
 category = offchain[['address', 'class']]
 df_features = pd.merge(df_features,category,on='address',how='inner')
 df_features = df_features.drop(['address'], axis = 1)     
-    
+df_features.to_csv("testdata_30k_features.csv", index=False)    
     
