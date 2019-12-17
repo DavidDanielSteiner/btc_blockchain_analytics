@@ -6,7 +6,13 @@ Created on Mon Dec 16 14:49:53 2019
 """
 
 import pandas as pd
+import threading
+import numpy as np
 
+btc_price_data = pd.read_csv("data/btc_price_data.csv")
+btc_price_data = btc_price_data[['date', 'CapMrktCurUSD','PriceUSD']]
+btc_price_data['date'] = pd.to_datetime(btc_price_data['date']).apply(lambda x: '{year}-{month}-{day}'.format(year=x.year, month=x.month, day=x.day))  
+ 
 def feature_engineering(df):
     df = df.sort_values('block_number')    
     df = df.reset_index(drop=True)
@@ -29,10 +35,7 @@ def feature_engineering(df):
             balance -= row['value_btc']
         df.at[index,'balance_btc'] = balance
      
-    #Add Dollar Price 
-    btc_price_data = btc_price_data[['date', 'CapMrktCurUSD','PriceUSD']]
-    btc_price_data['date'] = pd.to_datetime(btc_price_data['date']).apply(lambda x: '{year}-{month}-{day}'.format(year=x.year, month=x.month, day=x.day))  
-    
+    #Add Dollar Price    
     df['date'] = pd.to_datetime(df['block_timestamp']).apply(lambda x: '{year}-{month}-{day}'.format(year=x.year, month=x.month, day=x.day))
     df = pd.merge(df, btc_price_data, on='date', how='inner')
     
@@ -113,29 +116,46 @@ def feature_engineering(df):
 
 
 #########
+df_features = pd.DataFrame()    
+
+def start_engineer(list_address):
+    for address in list_address:
+        df = all_tnx[all_tnx['address'] == address]
+        print('scanned addresses')
+        final = feature_engineering(df)
+        global df_features
+        df_features = df_features.append(final)
+        print(address, len(df_features), "/" , len(addresses), 'appended', sep=" ")
     
+#Load data
+
+#all_tnx = pd.read_csv("data/testdata_30k.csv", index_col=False)
+addresses = all_tnx.drop_duplicates(subset='address')['address'].to_list()
+print('Dataset loaded')
+
+#Multithrading
+addresses_list = np.array_split(addresses, 100)
+
+for counter, list_address in enumerate(addresses_list):   
+    thread_engineer = threading.Thread(target=start_engineer, args=(list_address,))
+    thread_engineer.start() 
+    print('Thread started')
+    
+    
+    
+########
+    
+ #Data for sql
 offchain = pd.read_csv("data/offchain.csv", index_col=False)
 offchain = offchain.dropna(subset=['class'])
 #list_addresses = offchain.sample(n=100, random_state = 1)['address'].to_list()
 list_addresses = offchain['address'].to_list()
 
-
-
-btc_price_data = pd.read_csv("data/btc_price_data.csv")
-all_tnx = pd.read_csv("data/testdata_30k.csv", index_col=False)
-addresses = all_tnx.drop_duplicates(subset='address')['address'].to_list()
-
-df_features = pd.DataFrame()
-all_tnx.dtypes
-
-for address in addresses:
-    df = all_tnx[all_tnx['address'] == address]
-    final = feature_engineering(df)
-    df_features = df_features.append(final)
-    print(address, 'appended', sep=" ")
   
 category = offchain[['address', 'class']]
 df_features = pd.merge(df_features,category,on='address',how='inner')
-df_features = df_features.drop(['address'], axis = 1)     
+#df_features = df_features.drop(['address'], axis = 1)     
 df_features.to_csv("testdata_30k_features.csv", index=False)    
     
+
+print(">>>>>>>>>>>", len(df_features), sep= " ")
