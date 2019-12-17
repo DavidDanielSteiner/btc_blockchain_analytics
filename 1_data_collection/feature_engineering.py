@@ -121,6 +121,7 @@ offchain = offchain.dropna(subset=['class'])
 list_addresses = offchain['address'].to_list()
 
 
+all_tnx = pd.read_csv("data/testdata_30k.csv", index_col=False)
 addresses = all_tnx.drop_duplicates(subset='address')['address'].to_list()
 
 df_features = pd.DataFrame()
