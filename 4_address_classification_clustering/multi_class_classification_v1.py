@@ -7,9 +7,10 @@ Created on Tue Dec 17 15:04:53 2019
 
 #Random Forest
 #https://stackabuse.com/random-forest-algorithm-with-python-and-scikit-learn/
-https://towardsdatascience.com/hyperparameter-tuning-the-random-forest-in-python-using-scikit-learn-28d2aa77dd74
+#https://towardsdatascience.com/hyperparameter-tuning-the-random-forest-in-python-using-scikit-learn-28d2aa77dd74
 
-https://mlfromscratch.com/gridsearch-keras-sklearn/#/
+#GridSearch
+#https://mlfromscratch.com/gridsearch-keras-sklearn/#/
 
 
 import numpy as np
@@ -55,14 +56,13 @@ def algorithm_pipeline(X_train_data, X_test_data, y_train_data, y_test_data,
     #https://scikit-learn.org/stable/modules/model_evaluation.html
 
 # =============================================================================
-# XBGBoost
+# XBGBoost Regression
 # =============================================================================
 boston = load_boston()
 X = boston.data
 y = boston.target
 
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-
 
 model = xgb.XGBRegressor()
 param_grid = {
@@ -81,12 +81,19 @@ print(np.sqrt(-model.best_score_))
 print(model.best_params_)
 
 
+
+
+
 # =============================================================================
 # LightGBM
 # =============================================================================
 cancer = load_breast_cancer()
 X = cancer.data
 y = cancer.target
+
+df = pd.read_csv("data/testdata_30k_features.csv")
+
+
 
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
