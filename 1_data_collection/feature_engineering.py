@@ -158,4 +158,4 @@ df_features = pd.merge(df_features,category,on='address',how='inner')
 df_features.to_csv("testdata_30k_features.csv", index=False)    
     
 
-print(">>>>>>>>>>>", len(df_features), sep= " ")
+
