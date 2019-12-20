@@ -148,7 +148,6 @@ def start_engineer(list_address):
         print(address, len(df_features), "/" , len(addresses), 'appended', sep=" ")
     
 #Load data
-
 all_tnx = pd.read_csv("data/testdata_30k.csv", index_col=False)
 addresses = all_tnx.drop_duplicates(subset='address')['address'].to_list()
 print('Dataset loaded')
@@ -164,13 +163,13 @@ for counter, list_address in enumerate(addresses_list):
      
 ########
     
- #Data for sql
+#Data for sql
 offchain = pd.read_csv("data/offchain.csv", index_col=False)
 offchain = offchain.dropna(subset=['class'])
 #list_addresses = offchain.sample(n=100, random_state = 1)['address'].to_list()
 list_addresses = offchain['address'].to_list()
 
-  
+#Export Data
 category = offchain[['address', 'class']]
 df_features_2 = pd.merge(df_features,category,on='address',how='inner')
 #df_features = df_features.drop(['address'], axis = 1)     

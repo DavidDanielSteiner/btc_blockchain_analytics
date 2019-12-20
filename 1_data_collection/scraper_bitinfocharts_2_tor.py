@@ -40,7 +40,7 @@ address_1 =address_1.append(address_8)
 common = address_df.merge(address_1,on=['address'])
 address_df = address_df[(~address_df.address.isin(common.address))]
 
-address_list = np.array_split(address_df, 200)
+address_list = np.array_split(address_df, 50)
 wallet_list = []
 proxy_list = []
     
@@ -80,7 +80,7 @@ for counter, df in enumerate(address_list):
     print("--THREAD " + str(counter) + " STARTED")  
     thread_scrape_owner = threading.Thread(target=scrape_owner, args=(df,))
     thread_scrape_owner.start()      
-    time.sleep(random.uniform(5, 10))
+    time.sleep(random.uniform(2, 8))
 
 
 
