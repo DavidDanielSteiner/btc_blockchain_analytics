@@ -40,7 +40,7 @@ address_1 =address_1.append(address_8)
 common = address_df.merge(address_1,on=['address'])
 address_df = address_df[(~address_df.address.isin(common.address))]
 
-address_list = np.array_split(address_df, 50)
+address_list = np.array_split(address_df, 25)
 wallet_list = []
 proxy_list = []
     

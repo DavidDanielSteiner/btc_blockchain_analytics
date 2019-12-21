@@ -286,7 +286,7 @@ model.add(Dense(40, input_shape=(40,), activation='relu'))
 # hidden layer 
 model.add(Dropout(0.2))
 model.add(Dense(40, input_shape=(40,),activation='relu'))
-#model.add(Dropout(0.2))
+model.add(Dropout(0.2))
 model.add(Dense(40, input_shape=(40,),activation='relu'))
 # output layer 
 model.add(Dense(5, input_shape=(40,), activation='softmax'))
@@ -298,7 +298,7 @@ model.get_config()
 model.get_weights()
 
 model.compile(loss='categorical_crossentropy', #categorical_crossentropy, binary_crossentropy
-              optimizer='SGD', #SGD, RMSprop, adam
+              optimizer='adam', #SGD, RMSprop, adam
               metrics=['accuracy'])
                    
 model.fit(X_train, y_train,epochs=100, batch_size=10, verbose=1)
