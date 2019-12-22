@@ -98,5 +98,5 @@ filtered_tnx.to_csv("transactions_filtered_100K.csv", index=False)
 #wallets.to_csv("wallets.csv", index=False)
 
 unknown_wallets = get_unknown_wallets(filtered_tnx)
-unknown_wallets.to_csv("unkown_wallets.csv", index = False)
+unknown_wallets.to_csv(" .csv", index = False)
 

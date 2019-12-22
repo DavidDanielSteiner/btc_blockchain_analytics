@@ -50,17 +50,17 @@ def feature_engineering(df):
     #feature engineering
     tx = df.sort_values('type') 
     tx = tx.drop_duplicates(subset='hash', keep='first') #keep inputs
-    tx_type = df.drop_dublicates(subset=['hash', 'type'], keep='first')
-    
+    tx_type = df.drop_duplicates(subset=['hash', 'type'], keep='first')
+
     df['n_tx'] = len(tx)
-    df['lifetime'] = ((max(df['block_timestamp']) - min(df['block_timestamp'])).days) +1
+    df['lifetime'] = (((max(df['block_timestamp'])) - (min(df['block_timestamp']))).days) +1
     df['tx_per_day'] = df['n_tx'] / df['lifetime']
-    
+
     inputs = tx[tx['type'] == 'input']
     outputs = tx[tx['type'] == 'output']
     df['n_inputs'] = len(inputs)
     df['n_outputs'] = len(outputs)
-    df['p_received'] = len(inputs) / df['n_tx']
+    df['p_inputs'] = len(inputs) / df['n_tx']
     
     #transaction value usd category count 
     usd_per_tx = df[['hash', 'value_usd']].groupby('hash').agg({'value_usd':'sum'})
@@ -138,42 +138,70 @@ def feature_engineering(df):
 
 #########
 df_features = pd.DataFrame()    
-
+len(df_features)
 def start_engineer(list_address):
+    df_features_local = pd.DataFrame()  
     for address in list_address:
         df = all_tnx[all_tnx['address'] == address]
         final = feature_engineering(df)
-        global df_features
-        df_features = df_features.append(final)
-        print(address, len(df_features), "/" , len(addresses), 'appended', sep=" ")
+        df_features_local = df_features_local.append(final)
+        print(len(df_features_local), "/" , len(list_address), 'appended', sep=" ")
+    print(">>>THREAD FINISHED<<<")
+    global df_features
+    df_features = df_features.append(df_features_local)
     
 #Load data
 all_tnx = pd.read_csv("data/testdata_30k.csv", index_col=False)
+all_tnx = all_tnx.sample(n=10000, random_state = 1)
+#all_tnx = pd.read_csv("data/testdata_5k_exchange.csv", index_col=False)
+#df = all_tnx[all_tnx['address'] == '1AnsWKR3XnJ9cuhdugqZGvBPsfvDWxdY2N']
 addresses = all_tnx.drop_duplicates(subset='address')['address'].to_list()
-print('Dataset loaded')
 
 #Multithrading
-addresses_list = np.array_split(addresses, 50)
+addresses_list = np.array_split(addresses, 100)
 
 for counter, list_address in enumerate(addresses_list):   
     thread_engineer = threading.Thread(target=start_engineer, args=(list_address,))
     thread_engineer.start() 
-    print('Thread started')
+    print('Thread started', counter, sep=" ")
     
-     
+df_features.to_csv("testdata_5k_features_exchange.csv", index=False)     
+    
 ########
     
 #Data for sql
+
+##testdataset
 offchain = pd.read_csv("data/offchain.csv", index_col=False)
 offchain = offchain.dropna(subset=['class'])
-#list_addresses = offchain.sample(n=100, random_state = 1)['address'].to_list()
-list_addresses = offchain['address'].to_list()
+list_addresses = offchain.sample(n=5000, random_state = 1)
+list_addresses = offchain['address' , 'class']
+list_addresses.to_csv('address_train_5k_1.csv', index=False)
+
+##exchangedata
+df = pd.read_csv("data/transactions_filtered_10MIO.csv")
+#get distinct addresses
+sender = df[['sender', 'sender_category']]
+sender.rename(columns = {"sender" : 'address', 'sender_category': 'class'}, inplace = True) 
+receiver = df[['receiver', 'receiver_category']]
+receiver.rename(columns = {"receiver" : 'address', 'receiver_category' : 'class'}, inplace = True) 
+labels = sender.append(receiver)
+#missing_labels = missing_labels[['address']]
+labels = labels.drop_duplicates(subset='address', keep='last')    
+df = labels[labels['class'] == 'Exchange']
+
+df = df.sample(frac=1).reset_index(drop=True)
+df = df[0:5000]
+#df = df['address']
+df.to_csv('address_exchange_5k_1.csv', index=False)
+
+
 
 #Export Data
-category = offchain[['address', 'class']]
-df_features_2 = pd.merge(df_features,category,on='address',how='inner')
+#category = offchain[['address', 'class']]
+#df_features_2 = pd.merge(df_features,category,on='address',how='inner')
 #df_features = df_features.drop(['address'], axis = 1)     
-df_features_2.to_csv("testdata_30k_features.csv", index=False)    
+#df_features_2.to_csv("testdata_30k_features.csv", index=False)    
     
 
 

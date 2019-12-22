@@ -100,8 +100,9 @@ def get_all_tx_from_address_v1(list_addresses):
     return wallet_info
     
     
-
-list_addresses = ['1Evg7VMYi1wXGBPTY4j4xfMg4aMY3Fyr9R']
+df = pd.read_csv("data/address_exchange_1.csv")
+list_addresses = df['address'].to_list()
+#list_addresses = ['1Evg7VMYi1wXGBPTY4j4xfMg4aMY3Fyr9R']
 x = get_all_tx_from_address_v1(list_addresses)
 
 
@@ -166,9 +167,14 @@ def get_all_tx_from_address_v2(list_addresses):
     
     return wallet_info
     
-   
+df = pd.read_csv("data/address_exchange_1.csv")
+list_addresses = df['address'].to_list()
 all_tnx = get_all_tx_from_address_v2(list_addresses)
-all_tnx.to_csv("testdata_30k.csv", index=False)
+
+category = df[['address', 'class']]
+df_features_2 = pd.merge(all_tnx,category,on='address',how='inner')
+
+all_tnx.to_csv("testdata_5k_exchange.csv", index=False)
     
 # =============================================================================
 # get transactions with max transaction value
