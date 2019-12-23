@@ -130,6 +130,7 @@ def get_all_tx_from_address_v2(list_addresses):
     FROM `bigquery-public-data.crypto_bitcoin.inputs` as i     
     INNER JOIN `bigquery-public-data.crypto_bitcoin.transactions` AS t ON t.hash = i.transaction_hash    
     WHERE array_to_string(i.addresses, ',') in UNNEST(@address)
+    LIMIT 25000
     
     UNION ALL
     
@@ -149,6 +150,7 @@ def get_all_tx_from_address_v2(list_addresses):
     FROM `bigquery-public-data.crypto_bitcoin.outputs` as o     
     INNER JOIN `bigquery-public-data.crypto_bitcoin.transactions` AS t ON t.hash = o.transaction_hash        
     WHERE array_to_string(o.addresses, ',') in UNNEST(@address)
+    LIMIT 25000
     """
 
     
