@@ -155,5 +155,4 @@ def get_all_tx_over_value(btc):
     
     large_transactions = result.to_dataframe()   
     #large_transactions.to_csv("transactions_50BTC.csv", index=False)
-    #print("transactions saved to csv")
     return large_transactions
