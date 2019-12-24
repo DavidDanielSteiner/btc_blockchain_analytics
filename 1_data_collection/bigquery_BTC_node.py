@@ -130,7 +130,6 @@ def get_all_tx_from_address_v2(list_addresses):
     FROM `bigquery-public-data.crypto_bitcoin.inputs` as i     
     INNER JOIN `bigquery-public-data.crypto_bitcoin.transactions` AS t ON t.hash = i.transaction_hash    
     WHERE array_to_string(i.addresses, ',') in UNNEST(@address)
-    LIMIT 25000
     
     UNION ALL
     
@@ -150,7 +149,6 @@ def get_all_tx_from_address_v2(list_addresses):
     FROM `bigquery-public-data.crypto_bitcoin.outputs` as o     
     INNER JOIN `bigquery-public-data.crypto_bitcoin.transactions` AS t ON t.hash = o.transaction_hash        
     WHERE array_to_string(o.addresses, ',') in UNNEST(@address)
-    LIMIT 25000
     """
 
     
@@ -169,14 +167,15 @@ def get_all_tx_from_address_v2(list_addresses):
     
     return wallet_info
     
-df = pd.read_csv("data/address_exchange_1.csv")
+df = pd.read_csv("data/address_unknown_5k_1.csv")
+df['class'] = 'Unknown'
 list_addresses = df['address'].to_list()
 all_tnx = get_all_tx_from_address_v2(list_addresses)
 
 category = df[['address', 'class']]
-df_features_2 = pd.merge(all_tnx,category,on='address',how='inner')
+all_tnx_class = pd.merge(all_tnx,category,on='address',how='inner')
 
-all_tnx.to_csv("testdata_5k_exchange.csv", index=False)
+all_tnx_class.to_csv("testdata_5k_unknown.csv", index=False)
     
 # =============================================================================
 # get transactions with max transaction value

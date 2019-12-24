@@ -25,14 +25,6 @@ def merge_data():
     #wallets = wallets.append(wallets_4.dropna())
     wallets = wallets.drop_duplicates(subset='address', keep='last')
     
-    #change specific owner and category values
-    wallets.loc[wallets.owner == 'Xapo.com-2', 'owner'] = 'Xapo.com'
-    wallets.loc[wallets.owner == 'Bitfinex.com', 'owner'] = 'Bitfinex'
-    wallets.loc[wallets.owner == 'DPR Seized Coins 2', 'category'] = 'Service'
-    wallets.loc[wallets.owner == 'F2Pool', 'category'] = 'Pools'
-    wallets.loc[wallets.owner == 'HaoBTC.com', 'category'] = 'Exchange'
-    wallets.loc[wallets.owner == 'Xapo.com', 'category'] = 'Exchange'
-    
 
     #Preprocess transactions
     tnx['date'] = pd.to_datetime(tnx['block_timestamp']).apply(lambda x: '{year}-{month}-{day}'.format(year=x.year, month=x.month, day=x.day))

@@ -22,25 +22,11 @@ import random
 # =============================================================================
             
 address_df = pd.read_csv("data/unkown_wallets.csv", index_col=False)
-address_1 = pd.read_csv("data/wallets_bitinfocharts_with_numbers_1.csv", index_col=False)
-address_2 = pd.read_csv("data/wallets_bitinfocharts_with_numbers_2.csv", index_col=False)
-address_3 = pd.read_csv("data/wallets_bitinfocharts_with_numbers_3.csv", index_col=False)
-address_4 = pd.read_csv("data/wallets_bitinfocharts_with_numbers_4.csv", index_col=False)
-address_5 = pd.read_csv("data/wallets_bitinfocharts_with_numbers_5.csv", index_col=False)
-address_6 = pd.read_csv("data/wallets_bitinfocharts_with_numbers_6.csv", index_col=False)
-address_7 = pd.read_csv("data/wallets_bitinfocharts_with_numbers_7.csv", index_col=False)
-address_8 = pd.read_csv("data/wallets_bitinfocharts_with_numbers_8.csv", index_col=False)
-address_9 = pd.read_csv("data/wallets_bitinfocharts_with_numbers_9.csv", index_col=False)
-address_1 =address_1.append(address_2)
-address_1 =address_1.append(address_3)
-address_1 =address_1.append(address_4)
-address_1 =address_1.append(address_5)
-address_1 =address_1.append(address_6)
-address_1 =address_1.append(address_7)
-address_1 =address_1.append(address_8)
-address_1 =address_1.append(address_9)
-common = address_df.merge(address_1,on=['address'])
-address_df = address_df[(~address_df.address.isin(common.address))]
+#address_1 = pd.read_csv("data/wallets_bitinfocharts_with_numbers_1.csv", index_col=False)
+#address_2 = pd.read_csv("data/wallets_bitinfocharts_with_numbers_2.csv", index_col=False)
+#address_1 =address_1.append(address_2)
+#common = address_df.merge(address_1,on=['address'])
+#address_df = address_df[(~address_df.address.isin(common.address))]
 
 address_list = np.array_split(address_df, 50)
 wallet_list = []
@@ -91,7 +77,7 @@ for counter, df in enumerate(address_list):
 # =============================================================================
 wallets = pd.DataFrame(wallet_list, columns = ['address', 'owner']) 
 wallets['category'] = 'Exchange' 
-wallets.to_csv('wallets_bitinfocharts_with_numbers_10.csv', index = False)
+wallets.to_csv('wallets_bitinfocharts_with_numbers.csv', index = False)
 
 def remove_digits(address): 
     numbers = sum(c.isdigit() for c in address)
@@ -99,6 +85,7 @@ def remove_digits(address):
         return address.strip()
     else: 
         return "unknown"
+
 
 wallets["owner"] = wallets["owner"].apply(remove_digits)
 wallets = wallets[wallets['owner'] != 'unknown']

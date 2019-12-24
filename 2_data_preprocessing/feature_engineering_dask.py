@@ -27,6 +27,7 @@ def feature_engineering(df):
             balance -= row['value_btc']
         df.at[index,'balance_btc'] = balance
      
+    df['balance_usd'] = df['balance_btc'] * df['PriceUSD']
         
     #Lifetime and inputs
     tx = df.sort_values('type') 
@@ -112,8 +113,8 @@ def feature_engineering(df):
     final = df.drop(['block_number', 'block_timestamp', 'value_btc', 'hash',
            'input_count', 'output_count', 'tx_value_btc',
            'balance_btc', 'date', 'value_usd', 'tx_value_usd',
-           'value_percent_marketcap', 'balance_usd', 'type'], axis = 1) 
-    
+           'value_percent_marketcap', 'balance_usd', 'type', 'transaction_hash', 
+           'CapMrktCurUSD', 'PriceUSD'], axis = 1) 
     final = final.iloc[[0]]
     return final
 
@@ -137,7 +138,9 @@ def start_engineer(list_address):
         df_features = df_features.append(df_features_local)
   
    
-    
+# =============================================================================
+#     
+# =============================================================================
     
 import dask.dataframe as dd    
     
@@ -147,13 +150,18 @@ btc_price_data = btc_price_data[['date', 'CapMrktCurUSD','PriceUSD']]
 btc_price_data['date'] = dd.to_datetime(btc_price_data['date']).apply(lambda x: '{year}-{month}-{day}'.format(year=x.year, month=x.month, day=x.day))  
  
 #trainingsdata testsample 7 classes
-all_tnx = dd.read_csv("data/testdata_30k.csv")
-tmp = all_tnx.drop_duplicates(subset='address').compute()
-tmp = tmp.sample(n=10000, random_state = 1)['address']
-all_tnx = dd.merge(all_tnx,tmp,on='address',how='inner')
+#all_tnx = dd.read_csv("data/testdata_30k.csv")
+#tmp = all_tnx.drop_duplicates(subset='address').compute()
+#tmp = tmp.sample(n=10000, random_state = 1)['address']
+#all_tnx = dd.merge(all_tnx,tmp,on='address',how='inner')
 
 #Exhange dataset
 #all_tnx = dd.read_csv("data/testdata_5k_exchange.csv")
+
+#Unknown dataset
+all_tnx = dd.read_csv("data/testdata_5k_unknown.csv")
+
+
 
 #Add Dollar Price    
 all_tnx['date'] = dd.to_datetime(all_tnx['block_timestamp']).apply(lambda x: '{year}-{month}-{day}'.format(year=x.year, month=x.month, day=x.day))
@@ -161,15 +169,13 @@ all_tnx = dd.merge(all_tnx, btc_price_data, on='date', how='inner')
 all_tnx['value_usd'] = all_tnx['value_btc'] * all_tnx['PriceUSD']
 all_tnx['tx_value_usd'] = all_tnx['tx_value_btc'] * all_tnx['PriceUSD']
 all_tnx['value_percent_marketcap'] = (all_tnx['value_usd'] / all_tnx['CapMrktCurUSD']) *100
-all_tnx['balance_usd'] = all_tnx['balance_btc'] * all_tnx['PriceUSD']
-all_tnx = all_tnx.drop(['transaction_hash', 'CapMrktCurUSD', 'PriceUSD'], axis = 1) 
 all_tnx['block_timestamp'] = dd.to_datetime(all_tnx['block_timestamp'])
 all_tnx['balance_btc'] = 0.0 
 
 #Multithrading
 addresses = all_tnx.drop_duplicates(subset='address').compute()
 addresses = addresses['address'].to_list()
-addresses_list = np.array_split(addresses, 100)
+addresses_list = np.array_split(addresses, 200)
 
 #Convert dask df to pandas df
 all_tnx_2 = all_tnx.compute()
@@ -180,7 +186,7 @@ for counter, list_address in enumerate(addresses_list):
     print('Thread started', counter, sep=" ")
    
 #Export csv with features
-df_features.to_csv("testdata_10k_features.csv", index=False)     
+df_features.to_csv("testdata_5k_features_unknown.csv", index=False)     
   
 
 
@@ -196,7 +202,9 @@ df_features.to_csv("testdata_10k_features.csv", index=False)
 
 
   
-########
+# =============================================================================
+# 
+# =============================================================================
     
 #Data for sql
 
@@ -209,26 +217,27 @@ list_addresses.to_csv('address_train_5k_1.csv', index=False)
 
 ##exchangedata
 df = pd.read_csv("data/transactions_filtered_10MIO.csv")
-#get distinct addresses
+#get unique addresses
 sender = df[['sender', 'sender_category']]
 sender.rename(columns = {"sender" : 'address', 'sender_category': 'class'}, inplace = True) 
 receiver = df[['receiver', 'receiver_category']]
 receiver.rename(columns = {"receiver" : 'address', 'receiver_category' : 'class'}, inplace = True) 
 labels = sender.append(receiver)
-#missing_labels = missing_labels[['address']]
 labels = labels.drop_duplicates(subset='address', keep='last')    
-df = labels[labels['class'] == 'Exchange']
+#tmp = labels.drop_duplicates(subset='class')
+#df = labels[labels['class'] == 'Exchange']
+#df = labels[labels['class'].isnull()]
 
 df = df.sample(frac=1).reset_index(drop=True)
 df = df[0:5000]
-df.to_csv('address_exchange_5k_1.csv', index=False)
+df.to_csv('address_unknown_5k_1.csv', index=False)
 
 
 #Export Data
-#category = offchain[['address', 'class']]
-#df_features_2 = pd.merge(df_features,category,on='address',how='inner')
-#df_features = df_features.drop(['address'], axis = 1)     
-#df_features_2.to_csv("testdata_30k_features.csv", index=False)    
+category = offchain[['address', 'class']]
+df_features_2 = pd.merge(df_features,category,on='address',how='inner')
+df_features = df_features.drop(['address'], axis = 1)     
+df_features_2.to_csv("testdata_10k_features.csv", index=False)    
     
 
 

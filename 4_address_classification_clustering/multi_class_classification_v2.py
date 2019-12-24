@@ -78,7 +78,7 @@ def algorithm_pipeline(X_train_data, X_test_data, y_train_data, y_test_data,
         #Precision-Recall curve
         #ROC
         #https://scikit-learn.org/stable/modules/model_evaluation.html
-        print(classification_report (y_test, y_pred))
+        print(classification_report(y_test, y_pred))
 
         #Plot Confusion Matrix
         titles_options = [("Confusion matrix", None),
@@ -98,7 +98,7 @@ def algorithm_pipeline(X_train_data, X_test_data, y_train_data, y_test_data,
 # =============================================================================
 # Load dataset
 # =============================================================================
-df = pd.read_csv("data/testdata_30k_features.csv")
+df = pd.read_csv("data/testdata_10k_features.csv")
 df = df.drop(['address'], axis = 1)  
 df = df.fillna(0)
 df['tx_per_day'] = np.where(df['tx_per_day'] == np.inf, df['n_tx'], df['tx_per_day'])
@@ -162,7 +162,8 @@ param_grid = {
 
 model, pred = algorithm_pipeline(X_train, X_test, y_train, y_test, model, 
                                  param_grid, cv=10, scoring_fit='accuracy',
-                                 search_mode = 'RandomizedSearchCV', n_iterations = 2)
+                                 search_mode = 'RandomizedSearchCV', n_iterations = 1)
+
 
 
 # =============================================================================
@@ -207,6 +208,14 @@ param_grid = {'subsample_freq': [20], 'subsample': [0.7], 'reg_lambda': [1.1], '
 model, pred = algorithm_pipeline(X_train, X_test, y_train, y_test, model, 
                                  param_grid, cv=10, scoring_fit='accuracy',
                                  search_mode = 'GridSearchCV', n_iterations = 10)
+
+
+#importances = model.best_estimator_.feature_importances_
+
+feature_importances = pd.DataFrame(model.best_estimator_.feature_importances_,
+                                   index = X_train.columns,
+                                    columns=['importance']).sort_values('importance', ascending=False)
+
 
 # =============================================================================
 # 
@@ -321,3 +330,97 @@ f1_score(y_test,y_pred, average='micro')
 f1_score(y_test,y_pred, average='macro')
 f1_score(y_test,y_pred, average='weighted')
 print(classification_report (y_test, y_pred))
+
+
+
+
+
+
+
+
+# =============================================================================
+# Save model
+# =============================================================================
+from sklearn.externals import joblib
+
+filename = 'model.sav'
+joblib.dump(model, filename)
+
+loaded_model = joblib.load(filename)
+result = loaded_model.score(X_test, y_test)
+print(result)
+
+
+pred = loaded_model.predict(X_test)
+y_pred = pred
+   
+ 
+print(classification_report(y_test, y_pred))
+plot_confusion_matrix(loaded_model, X_test, y_test,
+                                         display_labels=labels,
+                                         values_format = '6.2f',
+                                         xticks_rotation = 'vertical',
+                                         cmap=plt.cm.Blues)
+
+
+# =============================================================================
+# Test data
+# =============================================================================
+
+df = pd.read_csv("data/testdata_5k_features_unknown.csv")
+df = df.drop(['address'], axis = 1)  
+df = df.fillna(0)
+df['class'] = 'Exchange'
+df = df.loc[df['class'].isin(['Exchange','Gambling','Market','Mixer','Pool'])]
+#df = df.drop(columns=df.iloc[:,6:15])
+
+
+#get encoded labels
+from sklearn.preprocessing import LabelEncoder
+labelencoder = LabelEncoder()
+df['target'] = labelencoder.fit_transform(df['class'])
+labels = df.drop_duplicates(subset='class')
+labels = (labels.sort_values(by='target')['class']).to_list()
+df = df.drop(columns='target')
+
+#features, targets
+df['class'] = labelencoder.fit_transform(df['class'])
+
+X_test = df.loc[:, df.columns != 'class']
+y_test = df['class']
+
+
+# =============================================================================
+# TODO
+# =============================================================================
+
+'''
+*Scrape all addresses
+*Select cutoff metric (10MIO, 0.1 PERCENT marcetcap)
+*Run algo and get unknown addresses
+
+*[Get most important features]
+*Change query 
+-add is_coinbase
+*Create more features / remove unneccessary
+
+*Recategorize wallets
+-Services , Service
+*
+
+*Refactor and order code
+
+
+
+'''
+
+
+
+
+
+
+
+
+
+
+
