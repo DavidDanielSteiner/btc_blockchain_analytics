@@ -337,6 +337,75 @@ df = pd.read_sql_query('''SELECT * FROM lyricmatcher WHERE id=4995''', engine)
 
 
 
+# =============================================================================
+# 
+# =============================================================================
+
+# =============================================================================
+# Prepare Full Wallet Dataset for Classification
+# =============================================================================
+def get_all_tx_from_address_v1(list_addresses):
+#get transaction overview from list of wallets
+
+    query = """
+    WITH all_transactions AS (
+    -- inputs
+    SELECT 
+        transaction_hash
+       , block_timestamp as timestamp
+       , array_to_string(addresses, ",") as address
+       , value
+       , 'sent' as type
+    FROM `bigquery-public-data.crypto_bitcoin.inputs`
+    
+    UNION ALL
+    
+    -- outputs
+    SELECT 
+        transaction_hash
+       , block_timestamp as timestamp
+       , array_to_string(addresses, ",") as address
+       , value
+       , 'received' as type
+    FROM `bigquery-public-data.crypto_bitcoin.outputs`
+    )
+    
+    SELECT
+       address
+       , type
+       , sum(value) as sum
+       , avg(value) as avg
+       , min(value) as min
+       , max(value) as max
+       , count(transaction_hash) as number_transactions
+       , min(timestamp) as first_transaction
+       , max(timestamp) as last_transaction
+    FROM all_transactions
+    WHERE address in UNNEST(@address)
+    GROUP BY type, address
+    """
+    
+    query_params = [    
+        bigquery.ArrayQueryParameter("address", "STRING", list_addresses),
+    ]
+    
+    job_config = bigquery.QueryJobConfig()
+    job_config.query_parameters = query_params
+    query_job = client.query(
+        query,
+        job_config=job_config,
+    )
+    result = query_job.result()
+    wallet_info = result.to_dataframe()
+    
+    return wallet_info
+    
+    
+df = pd.read_csv("data/address_exchange_1.csv")
+list_addresses = df['address'].to_list()
+#list_addresses = ['1Evg7VMYi1wXGBPTY4j4xfMg4aMY3Fyr9R']
+x = get_all_tx_from_address_v1(list_addresses)
+
 
 
 

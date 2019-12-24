@@ -40,77 +40,11 @@ def estimate_gigabytes_scanned(query, bq_client):
     print(f"This query will process {estimate} GBs.")
 
 
-# =============================================================================
-# Prepare Full Wallet Dataset for Classification
-# =============================================================================
-def get_all_tx_from_address_v1(list_addresses):
-#get transaction overview from list of wallets
-
-    query = """
-    WITH all_transactions AS (
-    -- inputs
-    SELECT 
-        transaction_hash
-       , block_timestamp as timestamp
-       , array_to_string(addresses, ",") as address
-       , value
-       , 'sent' as type
-    FROM `bigquery-public-data.crypto_bitcoin.inputs`
-    
-    UNION ALL
-    
-    -- outputs
-    SELECT 
-        transaction_hash
-       , block_timestamp as timestamp
-       , array_to_string(addresses, ",") as address
-       , value
-       , 'received' as type
-    FROM `bigquery-public-data.crypto_bitcoin.outputs`
-    )
-    
-    SELECT
-       address
-       , type
-       , sum(value) as sum
-       , avg(value) as avg
-       , min(value) as min
-       , max(value) as max
-       , count(transaction_hash) as number_transactions
-       , min(timestamp) as first_transaction
-       , max(timestamp) as last_transaction
-    FROM all_transactions
-    WHERE address in UNNEST(@address)
-    GROUP BY type, address
-    """
-    
-    query_params = [    
-        bigquery.ArrayQueryParameter("address", "STRING", list_addresses),
-    ]
-    
-    job_config = bigquery.QueryJobConfig()
-    job_config.query_parameters = query_params
-    query_job = client.query(
-        query,
-        job_config=job_config,
-    )
-    result = query_job.result()
-    wallet_info = result.to_dataframe()
-    
-    return wallet_info
-    
-    
-df = pd.read_csv("data/address_exchange_1.csv")
-list_addresses = df['address'].to_list()
-#list_addresses = ['1Evg7VMYi1wXGBPTY4j4xfMg4aMY3Fyr9R']
-x = get_all_tx_from_address_v1(list_addresses)
-
 
 # =============================================================================
-# get all inputs
-# =============================================================================
-    
-def get_all_tx_from_address_v2(list_addresses):
+# get all transactions for a list of addresses
+# =============================================================================   
+def get_all_tx_from_address(list_addresses):
 #get transaction overview from list of wallets
 
     query = """
@@ -118,13 +52,13 @@ def get_all_tx_from_address_v2(list_addresses):
         array_to_string(i.addresses, ",") as address,
         i.transaction_hash,
         i.block_number,  
-        i.block_timestamp,  
-        
         i.value / 100000000 as value_btc ,
         t.`hash`,
+        t.block_timestamp,  
         t.input_count,
         t.output_count,
-        t.input_value / 100000000 as tx_value_btc , 
+        t.is_coinbase,
+        t.output_value / 100000000 as tx_value_btc , 
         'input' as type
         
     FROM `bigquery-public-data.crypto_bitcoin.inputs` as i     
@@ -136,14 +70,14 @@ def get_all_tx_from_address_v2(list_addresses):
     SELECT 
         array_to_string(o.addresses, ",") as address,
         o.transaction_hash,
-        o.block_number,  
-        o.block_timestamp,  
-        
+        o.block_number,       
         o.value / 100000000 as value_btc ,
         t.`hash`,
+        t.block_timestamp,  
         t.input_count,
         t.output_count,
-        t.input_value / 100000000 as tx_value_btc, 
+        t.is_coinbase,
+        t.output_value / 100000000 as tx_value_btc, 
         'output' as type
         
     FROM `bigquery-public-data.crypto_bitcoin.outputs` as o     
@@ -151,6 +85,7 @@ def get_all_tx_from_address_v2(list_addresses):
     WHERE array_to_string(o.addresses, ',') in UNNEST(@address)
     """
 
+    print(estimate_gigabytes_scanned(query, client))
     
     query_params = [    
         bigquery.ArrayQueryParameter("address", "STRING", list_addresses),
@@ -163,25 +98,28 @@ def get_all_tx_from_address_v2(list_addresses):
         job_config=job_config,
     )
     result = query_job.result()
-    wallet_info = result.to_dataframe()
     
-    return wallet_info
+    tx = result.to_dataframe() 
+    tx = tx.drop(columns=['transaction_hash'])
+    return tx
+  
     
+'''
 df = pd.read_csv("data/address_unknown_5k_1.csv")
 df['class'] = 'Unknown'
 list_addresses = df['address'].to_list()
-all_tnx = get_all_tx_from_address_v2(list_addresses)
+all_tnx = get_all_tx_from_address(list_addresses)
 
 category = df[['address', 'class']]
 all_tnx_class = pd.merge(all_tnx,category,on='address',how='inner')
 
 all_tnx_class.to_csv("testdata_5k_unknown.csv", index=False)
-    
+'''
+ 
 # =============================================================================
 # get transactions with max transaction value
 # =============================================================================
-
-def get_tnx_max_value(btc):    
+def get_all_tx_over_value(btc):    
     btc_satoshi = 100000000 #btc in satoshi    
     satoshi_amount = btc * btc_satoshi
     
@@ -215,15 +153,7 @@ def get_tnx_max_value(btc):
     )
     result = query_job.result()
     
-    large_transactions = result.to_dataframe()       
-    large_transactions.to_csv("transactions_50BTC.csv", index=False)
-    print("transactions saved to csv")
+    large_transactions = result.to_dataframe()   
+    #large_transactions.to_csv("transactions_50BTC.csv", index=False)
+    #print("transactions saved to csv")
     return large_transactions
-
-
-# =============================================================================
-# Start
-# =============================================================================
-
-transactions = get_tnx_max_value(50)  
-wallet_tnx = get_all_tnx_from_address(wallet_list)

@@ -217,6 +217,11 @@ list_addresses.to_csv('address_train_5k_1.csv', index=False)
 
 ##exchangedata
 df = pd.read_csv("data/transactions_filtered_10MIO.csv")
+df['percent_marketcap'].mean()
+#tmp = df[df['percent_marketcap'] >= 0.01]
+#x = tmp.drop_duplicates(subset='hash')
+#tmp['dollar'].median()
+
 #get unique addresses
 sender = df[['sender', 'sender_category']]
 sender.rename(columns = {"sender" : 'address', 'sender_category': 'class'}, inplace = True) 
