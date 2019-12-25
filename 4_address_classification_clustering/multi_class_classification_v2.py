@@ -98,26 +98,32 @@ def algorithm_pipeline(X_train_data, X_test_data, y_train_data, y_test_data,
 # =============================================================================
 # Load dataset
 # =============================================================================
-df = pd.read_csv("data/testdata_10k_features.csv")
+df = pd.read_csv("../data/features_all_categories.csv")
 df = df.drop(['address'], axis = 1)  
 df = df.fillna(0)
-df['tx_per_day'] = np.where(df['tx_per_day'] == np.inf, df['n_tx'], df['tx_per_day'])
-df = df.loc[df['class'].isin(['Exchange','Gambling','Market','Mixer','Pool'])]
+
+df.loc[df.category == 'Service', 'category'] = 'Not_Exchange'
+df.loc[df.category == 'Mining', 'category'] = 'Not_Exchange'
+df.loc[df.category == 'Gambling', 'category'] = 'Not_Exchange'
+#df['tx_per_day'] = np.where(df['tx_per_day'] == np.inf, df['n_tx'], df['tx_per_day'])
+#df = df.loc[df['class'].isin(['Exchange','Gambling','Market','Mixer','Pool'])]
 #df = df.drop(columns=df.iloc[:,6:15])
 
 #get encoded labels
 from sklearn.preprocessing import LabelEncoder
 labelencoder = LabelEncoder()
-df['target'] = labelencoder.fit_transform(df['class'])
-labels = df.drop_duplicates(subset='class')
-labels = (labels.sort_values(by='target')['class']).to_list()
+df['target'] = labelencoder.fit_transform(df['category'])
+labels = df.drop_duplicates(subset='category')
+labels = (labels.sort_values(by='target')['category']).to_list()
+df.loc[df.is_coinbase == 'False', 'is_coinbase'] = 0
+df.loc[df.is_coinbase == 'True', 'is_coinbase'] = 1
 df = df.drop(columns='target')
 
 #features, targets
-df['class'] = labelencoder.fit_transform(df['class'])
+df['category'] = labelencoder.fit_transform(df['category'])
 
-X = df.loc[:, df.columns != 'class']
-y = df['class']
+X = df.loc[:, df.columns != 'category']
+y = df['category']
 
 '''
 # random oversampling all data
@@ -128,11 +134,6 @@ X, y = sm.fit_resample(X, y)
 
 #test, train split
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-
-# random oversampling training data
-from imblearn.over_sampling import SMOTE
-sm = SMOTE(sampling_strategy='auto')
-X_train, y_train = sm.fit_resample(X_train, y_train)
 
 
 # =============================================================================
@@ -214,7 +215,7 @@ model, pred = algorithm_pipeline(X_train, X_test, y_train, y_test, model,
 
 feature_importances = pd.DataFrame(model.best_estimator_.feature_importances_,
                                    index = X_train.columns,
-                                    columns=['importance']).sort_values('importance', ascending=False)
+                                   columns=['importance']).sort_values('importance', ascending=False)
 
 
 # =============================================================================
@@ -330,10 +331,6 @@ f1_score(y_test,y_pred, average='micro')
 f1_score(y_test,y_pred, average='macro')
 f1_score(y_test,y_pred, average='weighted')
 print(classification_report (y_test, y_pred))
-
-
-
-
 
 
 

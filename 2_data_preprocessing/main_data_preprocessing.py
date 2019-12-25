@@ -1,12 +1,25 @@
 # -*- coding: utf-8 -*-
 """
-Created on Tue Dec 24 18:40:24 2019
+Created on Tue Dec 23 18:40:24 2019
 
 @author: David
 """
 
 import pandas as pd
 import dask.dataframe as dd    
+
+
+# =============================================================================
+# Merge Data
+# =============================================================================
+
+
+
+
+# =============================================================================
+# Group Transactions and get unknown addresses
+# =============================================================================
+
 
 
 
@@ -24,16 +37,26 @@ from feature_engineering_dask_v2 import get_features
 #Exhange dataset
 #all_tnx = dd.read_csv("data/testdata_5k_exchange.csv")
 
-#Unknown dataset
-all_tnx = dd.read_csv("data/testdata_5k_unknown.csv")
+category_names = ['Exchange','Gambling','Service','Mixer','Mining']
+features_all_categories = pd.DataFrame()  
+category_name = 'Mining'
 
-df_features = get_features(all_tnx)
-
-#Export csv with features
-df_features.to_csv("testdata_5k_features_unknown.csv", index=False)     
+for category_name in category_names:
+    #Import csv with adr details
+    all_tnx = pd.read_csv("../data/address_" + category_name + ".csv")
+    
+    #create new features
+    df_features = get_features(all_tnx)
+    
+    #append 
+    features_all_categories = features_all_categories.append(df_features)
+    
+    #Export csv with features
+    df_features.to_csv("features_" + category_name + ".csv", index=False)  
+    print(category_name, "exported", sep=" ")
   
-
-
+#Export all features
+features_all_categories.to_csv("features_all_categories.csv", index=False) 
 
 
 
@@ -41,18 +64,9 @@ df_features.to_csv("testdata_5k_features_unknown.csv", index=False)
 
 
 # =============================================================================
-# 
+# Random
 # =============================================================================
 
-
-#Data for sql
-
-##testdataset
-offchain = pd.read_csv("data/offchain.csv", index_col=False)
-offchain = offchain.dropna(subset=['class'])
-list_addresses = offchain.sample(n=5000, random_state = 42)
-list_addresses = offchain['address' , 'class']
-list_addresses.to_csv('address_train_5k_1.csv', index=False)
 
 ##exchangedata
 df = pd.read_csv("data/transactions_filtered_10MIO.csv")
@@ -71,10 +85,6 @@ labels = labels.drop_duplicates(subset='address', keep='last')
 #tmp = labels.drop_duplicates(subset='class')
 #df = labels[labels['class'] == 'Exchange']
 #df = labels[labels['class'].isnull()]
-
-df = df.sample(frac=1).reset_index(drop=True)
-df = df[0:5000]
-df.to_csv('address_unknown_5k_1.csv', index=False)
 
 
 #Export Data

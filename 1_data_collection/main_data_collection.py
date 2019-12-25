@@ -29,7 +29,7 @@ large_tx.to_csv("transactions_" + str(btc) +'BTC.csv", index=False)
 from bigquery_BTC_node import get_all_tx_from_address
 
 df = pd.read_csv("../data/btc_wallets.csv")
-
+mining.drop_duplicates(subset='address')
 exchange = df[df['category'] == 'Exchange'].sample(n=10000, random_state = 1)['address'].to_list()
 gambling = df[df['category'] == 'Gambling'].sample(n=10000, random_state = 1)['address'].to_list()
 service = df[df['category'] == 'Service'].sample(n=10000, random_state = 1)['address'].to_list()
