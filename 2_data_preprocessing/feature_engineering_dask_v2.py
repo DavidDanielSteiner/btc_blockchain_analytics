@@ -11,13 +11,6 @@ import numpy as np
 import dask.dataframe as dd    
 
 
-#remove is coinbase
-#add moments metrci
-#check payback
-#make new feautres
-
-
-
 def feature_engineering(df):
     df = df.sort_values('block_number')    
     df = df.reset_index(drop=True)        
@@ -41,7 +34,6 @@ def feature_engineering(df):
     tx = df.sort_values('type') 
     tx = tx.reset_index(drop=True)  
     tx = tx.drop_duplicates(subset='hash', keep='first') #keep inputs
-    tx_type = df.drop_duplicates(subset=['hash', 'type'], keep='first')
 
     df['n_tx'] = len(tx)
     df['lifetime'] = (((max(df['block_timestamp'])) - (min(df['block_timestamp']))).days) +1
@@ -70,6 +62,7 @@ def feature_engineering(df):
     df['p_10b'] = len(tx[tx['value_usd'] >= 1000000000]) / df['n_tx']
         
     #paypack rate (address in input and output)
+    tx_type = df.drop_duplicates(subset=['hash', 'type'], keep='first')
     inputs = tx_type[tx_type['type'] == 'input']
     outputs = tx_type[tx_type['type'] == 'output']    
     payback = pd.merge(inputs,outputs, how='inner', on='hash')
@@ -96,7 +89,7 @@ def feature_engineering(df):
     df['adr_inputs_usd'] = df[df['type'] == 'input']['value_usd'].sum()
     df['adr_outputs_usd'] = df[df['type'] == 'output']['value_usd'].sum()
     df['adr_dif_usd'] = df['adr_inputs_usd'] - df['adr_outputs_usd']
-    df['p_adr_dif_usd'] = (df['adr_inputs_usd'] - df['adr_outputs_usd']) / df['adr_inputs_usd']
+    df['p_adr_dif_usd'] = df['adr_dif_usd'] / df['adr_inputs_usd']
     
     #adr transaction value (one address)
     df['input_mean_value_btc'] = inputs['value_btc'].mean()
@@ -182,7 +175,7 @@ def handle_threads(list_address, counter):
 
 
    
-def get_features(tx):
+def get_features(tx, n_threads = 100):
     global df_features
     df_features = df_features[0:0]
     
@@ -201,12 +194,12 @@ def get_features(tx):
     tx['balance_btc'] = 0.0 
     
     #Multithrading
-    print("Split data into 100 threads")
+    print("Split data into " + str(n_threads) + "threads")
     global all_tnx
     all_tnx = tx
     addresses = all_tnx.drop_duplicates(subset='address')['address'].to_list()
     print('Rows: ', len(addresses), sep=" ")
-    addresses_list = np.array_split(addresses, 100)
+    addresses_list = np.array_split(addresses, n_threads)
     
     threads = []
     

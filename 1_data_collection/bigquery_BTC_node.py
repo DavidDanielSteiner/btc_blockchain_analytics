@@ -42,6 +42,49 @@ def estimate_gigabytes_scanned(query, bq_client):
 
 
 # =============================================================================
+# get transactions with max transaction value
+# =============================================================================
+def get_all_tx_over_value(btc):    
+    btc_satoshi = 100000000 #btc in satoshi    
+    satoshi_amount = btc * btc_satoshi
+    
+    query = """
+    SELECT
+        `hash`,
+        block_timestamp,
+        array_to_string(inputs.addresses, ",") as sender,
+        array_to_string(outputs.addresses, ",") as receiver,
+        output_value / 100000000 as value
+    FROM `bigquery-public-data.crypto_bitcoin.transactions`
+        JOIN UNNEST (inputs) AS inputs
+        JOIN UNNEST (outputs) AS outputs
+    WHERE outputs.value  >= @satoshis
+        AND inputs.addresses IS NOT NULL
+        AND outputs.addresses IS NOT NULL
+    GROUP BY `hash`, block_timestamp, sender, receiver, value
+    """
+       
+    query_params = [    
+        bigquery.ScalarQueryParameter("satoshis", "INT64", satoshi_amount),
+    ]
+     
+    estimate_gigabytes_scanned(query, client)
+    
+    job_config = bigquery.QueryJobConfig()
+    job_config.query_parameters = query_params
+    query_job = client.query(
+            query,
+            job_config=job_config,
+    )
+    result = query_job.result()
+    
+    large_transactions = result.to_dataframe()   
+    print("Successfully pulled transactions from bigquery")
+    return large_transactions
+
+
+
+# =============================================================================
 # get all transactions for a list of addresses
 # =============================================================================   
 def get_all_tx_from_address(list_addresses):
@@ -104,55 +147,3 @@ def get_all_tx_from_address(list_addresses):
     return tx
   
     
-'''
-df = pd.read_csv("data/address_unknown_5k_1.csv")
-df['class'] = 'Unknown'
-list_addresses = df['address'].to_list()
-all_tnx = get_all_tx_from_address(list_addresses)
-
-category = df[['address', 'class']]
-all_tnx_class = pd.merge(all_tnx,category,on='address',how='inner')
-
-all_tnx_class.to_csv("testdata_5k_unknown.csv", index=False)
-'''
- 
-# =============================================================================
-# get transactions with max transaction value
-# =============================================================================
-def get_all_tx_over_value(btc):    
-    btc_satoshi = 100000000 #btc in satoshi    
-    satoshi_amount = btc * btc_satoshi
-    
-    query = """
-    SELECT
-        `hash`,
-        block_timestamp,
-        array_to_string(inputs.addresses, ",") as sender,
-        array_to_string(outputs.addresses, ",") as receiver,
-        output_value / 100000000 as value
-    FROM `bigquery-public-data.crypto_bitcoin.transactions`
-        JOIN UNNEST (inputs) AS inputs
-        JOIN UNNEST (outputs) AS outputs
-    WHERE outputs.value  >= @satoshis
-        AND inputs.addresses IS NOT NULL
-        AND outputs.addresses IS NOT NULL
-    GROUP BY `hash`, block_timestamp, sender, receiver, value
-    """
-       
-    query_params = [    
-        bigquery.ScalarQueryParameter("satoshis", "INT64", satoshi_amount),
-    ]
-     
-    estimate_gigabytes_scanned(query, client)
-    
-    job_config = bigquery.QueryJobConfig()
-    job_config.query_parameters = query_params
-    query_job = client.query(
-            query,
-            job_config=job_config,
-    )
-    result = query_job.result()
-    
-    large_transactions = result.to_dataframe()   
-    #large_transactions.to_csv("transactions_50BTC.csv", index=False)
-    return large_transactions

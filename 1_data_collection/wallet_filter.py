@@ -58,20 +58,23 @@ df['category'] = 'Service'
 df = df[['address', 'owner', 'category']]
 wallets = wallets.append(df)
 
+
+
+
 wallets = wallets.drop_duplicates(subset='address')
+
+#wallets_1 = pd.read_csv("data/wallets_walletexplorer.csv", index_col=False)
+#wallets_2 = pd.read_csv("data/wallets_bitinfocharts.csv", index_col=False)
+#wallets_3 = pd.read_csv("data/wallets_bitinfocharts_missing.csv", index_col=False)
+#wallets_4 = pd.read_csv("data/wallets_cryptoground.csv", index_col=False)       
+#Merge with wallets
+#wallets = wallets[['address', 'owner', 'category']]
+#wallets = wallets.append(wallets_2.dropna())
+#wallets = wallets.append(wallets_3.dropna())
 
 # =============================================================================
 # Recategorize  
 # =============================================================================
-#bitinfocharts
-wallets.loc[wallets.owner == 'bitmain.com', 'category'] = 'Pools'
-wallets.loc[wallets.owner == 'F2Pool', 'category'] = 'Pools'
-wallets.loc[wallets.owner == 'Cloudbet.com', 'category'] = 'Gambling'
-
-#historic
-#tmp = wallets[wallets['category'] == 'Historic']
-#tmp = tmp.drop_duplicates(subset='owner', keep='last')
-#list_o = tmp['owner'].tolist()
 owner = df.drop_duplicates(subset='owner')
 category = wallets.drop_duplicates(subset='category')
 
@@ -115,6 +118,7 @@ wallets.loc[wallets.owner == 'DaDice.com', 'category'] = 'Gambling'
 wallets.loc[wallets.owner == 'DaDice.com', 'category'] = 'Gambling'
 wallets.loc[wallets.owner == 'DaDice.com', 'category'] = 'Gambling'
 wallets.loc[wallets.owner == 'DaDice.com', 'category'] = 'Gambling'
+wallets.loc[wallets.owner == 'Cloudbet.com', 'category'] = 'Gambling'
 
 wallets.loc[wallets.owner == 'Comkort.com', 'category'] = 'Exchange'
 wallets.loc[wallets.owner == 'Bitcash.cz', 'category'] = 'Exchange'
@@ -131,12 +135,12 @@ wallets.loc[wallets.owner == 'CryptcoMiner.com', 'category'] = 'Pools'
 wallets.loc[wallets.owner == 'Cryptomine.io', 'category'] = 'Pools'
 wallets.loc[wallets.owner == '50BTC.com', 'category'] = 'Pools'
 wallets.loc[wallets.owner == 'Polmine.pl', 'category'] = 'Pools'
+wallets.loc[wallets.owner == 'bitmain.com', 'category'] = 'Pools'
+wallets.loc[wallets.owner == 'F2Pool', 'category'] = 'Pools'
 
-#services
-wallets.loc[wallets.owner == 'BitLaunder.com.pl', 'category'] = 'Mixer'
+wallets.loc[wallets.owner == 'BitLaunder.com', 'category'] = 'Mixer'
 wallets.loc[wallets.owner == 'HelixMixer', 'category'] = 'Mixer'
 wallets.loc[wallets.owner == 'BitcoinFog', 'category'] = 'Mixer'
-wallets.loc[wallets.owner == 'BitLaunder.com.pl', 'category'] = 'Mixer'
 
 #change specific owner and category values
 wallets.loc[wallets.owner == 'Xapo.com-2', 'owner'] = 'Xapo.com'
@@ -146,25 +150,31 @@ wallets.loc[wallets.owner == 'F2Pool', 'category'] = 'Pools'
 wallets.loc[wallets.owner == 'HaoBTC.com', 'category'] = 'Exchange'
 wallets.loc[wallets.owner == 'Xapo.com', 'category'] = 'Exchange'
 
-
 #Remove Historic
 wallets.loc[wallets.category == 'Pools', 'category'] = 'Mining'
 wallets.loc[wallets.category == 'Services', 'category'] = 'Service'
 wallets = wallets[wallets['category'] != 'Historic']
 
-wallets.to_csv("data/btc_wallets.csv", index = False)
+#Change duplicate name
+wallets.loc[wallets['owner'].str.contains('HelixMixer'), 'owner'] = 'HelixMixer'
 
 
 # =============================================================================
-# Export data to Database
+# Export data to CSV and DB
 # =============================================================================
+wallet_owners = pd.DataFrame()
+wallet_owners = wallets.groupby(['owner', 'category']).agg(['count'], as_index=False).reset_index()
+wallet_owners.columns = ['owner', 'category', 'count']
+wallet_owners.to_csv("btc_wallets_owner.csv", index = False)
 
-wallets = pd.read_csv("data/btc_wallets.csv", index_col=False)
 
+#Export to csv
+wallets.to_csv("btc_wallets.csv", index = False)
+
+#Export to database
 from sqlalchemy import create_engine 
 import importlib.util
 
-#DB connection
 spec = importlib.util.spec_from_file_location("module.name", "C:/Users/David/Dropbox/Code/config.py")
 config = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(config)
