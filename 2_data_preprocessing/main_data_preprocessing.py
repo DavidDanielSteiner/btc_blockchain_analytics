@@ -23,12 +23,8 @@ wallets = pd.read_csv("../data/btc_wallets.csv")
 
 #Combine all data sources
 tnx = merge_data(btc_price_data, transactions, wallets)
+tnx.to_csv("transactions_100BTC_merged.csv", index=False)
 
-#filtered_tnx = filter_data(data, filter_type = 'dollar', value=100000)
-#filtered_tnx.to_csv("transactions_filtered_100K.csv", index=False)
-#wallets.to_csv("wallets.csv", index=False)
-#unknown_wallets = get_unknown_wallets(filtered_tnx)
-#unknown_wallets.to_csv(" .csv", index = False)
 
 # =============================================================================
 # Group Transactions
@@ -36,14 +32,11 @@ tnx = merge_data(btc_price_data, transactions, wallets)
 from common_input_clustering import merge_tnx_wallets, group_transactions, regroup, add_category
 from data_merging import add_new_wallets
 
-#wallets = pd.read_csv("../data/btc_wallets.csv", index_col=False)  
-#tnx = pd.read_csv("../data/transactions_filtered_10MIO.csv", index_col=False)  
+#tnx = pd.read_csv("../data/transactions_100BTC_merged.csv", index_col=False)  
 tnx = tnx.drop(['sender_name', 'sender_category', 'receiver_name', 'receiver_category', 'CapMrktCurUSD'], axis=1)  
-#tnx = dd.from_pandas(tmp, npartitions=10)
 
 #label all addresses within same transaction hash, if one address is labeled 
 labeled_wallets = pd.DataFrame()
-#labeled_wallets = dd.from_pandas(labeled_wallets, npartitions=10)
 
 for i in range(10):
     labeled_tnx = merge_tnx_wallets(tnx, wallets, labeled_wallets)
@@ -68,7 +61,7 @@ filtered_tnx.to_csv("transactions_" + filter_name + ".csv", index=False)
 
 
 # =============================================================================
-# Get list of unknown addresses  (for scraping)
+# Get list of unknown addresses (for scraping)
 # =============================================================================
 from data_merging import filter_data
 

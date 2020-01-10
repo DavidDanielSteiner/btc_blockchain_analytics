@@ -9,15 +9,9 @@ import pandas as pd
 import threading
 import numpy as np
 
-
 def feature_engineering(df):
     df = df.sort_values('block_number')    
-    df = df.reset_index(drop=True)
-    
-    df['block_timestamp'] = pd.to_datetime(df['block_timestamp'])
-    df["value_btc"] = pd.to_numeric(df["value_btc"])
-    df["tx_value_btc"] = pd.to_numeric(df["tx_value_btc"])
-    df['balance_btc'] = 0.0
+    df = df.reset_index(drop=True)        
     
     #Calculate Balance
     for index, row in df.iterrows():
@@ -32,22 +26,12 @@ def feature_engineering(df):
             balance -= row['value_btc']
         df.at[index,'balance_btc'] = balance
      
-    #Add Dollar Price    
-    df['date'] = pd.to_datetime(df['block_timestamp']).apply(lambda x: '{year}-{month}-{day}'.format(year=x.year, month=x.month, day=x.day))
-    df = pd.merge(df, btc_price_data, on='date', how='inner')
-    
-    df['value_usd'] = df['value_btc'] * df['PriceUSD']
-    df['tx_value_usd'] = df['tx_value_btc'] * df['PriceUSD']
-    df['value_percent_marketcap'] = (df['value_usd'] / df['CapMrktCurUSD']) *100
     df['balance_usd'] = df['balance_btc'] * df['PriceUSD']
-    
-    df = df.drop(['transaction_hash', 'CapMrktCurUSD', 'PriceUSD'], axis = 1) 
-    
-    
-    #feature engineering
+        
+    #Lifetime and inputs
     tx = df.sort_values('type') 
+    tx = tx.reset_index(drop=True)  
     tx = tx.drop_duplicates(subset='hash', keep='first') #keep inputs
-    tx_type = df.drop_duplicates(subset=['hash', 'type'], keep='first')
 
     df['n_tx'] = len(tx)
     df['lifetime'] = (((max(df['block_timestamp'])) - (min(df['block_timestamp']))).days) +1
@@ -59,19 +43,24 @@ def feature_engineering(df):
     df['n_outputs'] = len(outputs)
     df['p_inputs'] = len(inputs) / df['n_tx']
     
-    #transaction value usd category count 
-    usd_per_tx = df[['hash', 'value_usd']].groupby('hash').agg({'value_usd':'sum'})
-    df['p_0k'] = len(usd_per_tx[usd_per_tx['value_usd'] <= 100]) / df['n_tx']
-    df['p_1k'] = len(usd_per_tx[ (usd_per_tx['value_usd'] >= 100) & (usd_per_tx['value_usd'] < 1000)]) / df['n_tx']
-    df['p_10k'] = len(usd_per_tx[ (usd_per_tx['value_usd'] >= 1000) & (usd_per_tx['value_usd'] < 10000)]) / df['n_tx']
-    df['p_100k'] = len(usd_per_tx[ (usd_per_tx['value_usd'] >= 10000) & (usd_per_tx['value_usd'] < 100000)]) / df['n_tx']
-    df['p_1m'] = len(usd_per_tx[ (usd_per_tx['value_usd'] >= 100000) & (usd_per_tx['value_usd'] < 1000000)]) / df['n_tx']
-    df['p_10m'] = len(usd_per_tx[ (usd_per_tx['value_usd'] >= 1000000) & (usd_per_tx['value_usd'] < 10000000)]) / df['n_tx']
-    df['p_100m'] = len(usd_per_tx[ (usd_per_tx['value_usd'] >= 10000000) & (usd_per_tx['value_usd'] < 100000000)]) / df['n_tx']
-    df['p_1b'] = len(usd_per_tx[ (usd_per_tx['value_usd'] >= 100000000) & (usd_per_tx['value_usd'] < 1000000000)]) / df['n_tx']
-    df['p_10b'] = len(usd_per_tx[usd_per_tx['value_usd'] >= 1000000000]) / df['n_tx']
+    #coinbase
+    df.loc[df.is_coinbase == 'False', 'is_coinbase'] = 0
+    df.loc[df.is_coinbase == 'True', 'is_coinbase'] = 1
     
+    #transaction value usd category count 
+    #usd_per_tx = df[['hash', 'value_usd']].groupby('hash').agg({'value_usd':'sum'})
+    df['p_0k'] = len(tx[tx['value_usd'] <= 100]) / df['n_tx']
+    df['p_1k'] = len(tx[(tx['value_usd'] >= 100) & (tx['value_usd'] < 1000)]) / df['n_tx']
+    df['p_10k'] = len(tx[(tx['value_usd'] >= 1000) & (tx['value_usd'] < 10000)]) / df['n_tx']
+    df['p_100k'] = len(tx[(tx['value_usd'] >= 10000) & (tx['value_usd'] < 100000)]) / df['n_tx']
+    df['p_1m'] = len(tx[(tx['value_usd'] >= 100000) & (tx['value_usd'] < 1000000)]) / df['n_tx']
+    df['p_10m'] = len(tx[(tx['value_usd'] >= 1000000) & (tx['value_usd'] < 10000000)]) / df['n_tx']
+    df['p_100m'] = len(tx[(tx['value_usd'] >= 10000000) & (tx['value_usd'] < 100000000)]) / df['n_tx']
+    df['p_1b'] = len(tx[(tx['value_usd'] >= 100000000) & (tx['value_usd'] < 1000000000)]) / df['n_tx']
+    df['p_10b'] = len(tx[tx['value_usd'] >= 1000000000]) / df['n_tx']
+        
     #paypack rate (address in input and output)
+    tx_type = df.drop_duplicates(subset=['hash', 'type'], keep='first')
     inputs = tx_type[tx_type['type'] == 'input']
     outputs = tx_type[tx_type['type'] == 'output']    
     payback = pd.merge(inputs,outputs, how='inner', on='hash')
@@ -88,6 +77,9 @@ def feature_engineering(df):
     df['std_balance_btc']  = df['balance_btc'].std() 
     df['mean_balance_usd'] = df['balance_usd'].mean()  
     df['std_balance_usd'] = df['balance_usd'].std() 
+    df['max_balance_usd'] = df['balance_usd'].max() 
+    df['median_balance_usd'] = df['balance_usd'].median() 
+    df['mode_balance_usd'] = df['balance_usd'].mode() 
         
     #totql address input and output transaction value
     df['adr_inputs_btc'] = df[df['type'] == 'input']['value_btc'].sum()
@@ -95,125 +87,136 @@ def feature_engineering(df):
     df['adr_inputs_usd'] = df[df['type'] == 'input']['value_usd'].sum()
     df['adr_outputs_usd'] = df[df['type'] == 'output']['value_usd'].sum()
     df['adr_dif_usd'] = df['adr_inputs_usd'] - df['adr_outputs_usd']
-    df['p_adr_dif_usd'] = (df['adr_inputs_usd'] - df['adr_outputs_usd']) / df['adr_inputs_usd']
+    df['p_adr_dif_usd'] = df['adr_dif_usd'] / df['adr_inputs_usd']
     
     #adr transaction value (one address)
     df['input_mean_value_btc'] = inputs['value_btc'].mean()
     df['input_std_value_btc'] = inputs['value_btc'].std()  
     df['input_mean_value_usd'] = inputs['value_usd'].mean()
     df['input_std_value_usd'] = inputs['value_usd'].std()  
-    df['input_mean_per_marketcap_usd'] = inputs['value_percent_marketcap'].mean()  
-    df['input_std_per_marketcap_usd'] = inputs['value_percent_marketcap'].std() 
-    
+    df['input_max_value_usd'] = inputs['value_usd'].max()  
+    df['input_median_value_usd'] = inputs['value_usd'].median()  
+    df['input_mode_value_usd'] = inputs['value_usd'].mode() 
+     
     df['output_mean_value_btc'] = outputs['value_btc'].mean()
     df['output_std_value_btc'] = outputs['value_btc'].std()  
     df['output_mean_value_usd'] = outputs['value_usd'].mean()
     df['output_std_value_usd'] = outputs['value_usd'].std()  
-    df['output_mean_per_marketcap_usd'] = outputs['value_percent_marketcap'].mean()  
-    df['output_std_per_marketcap_usd'] = outputs['value_percent_marketcap'].std() 
-     
+    df['output_max_value_usd'] = outputs['value_usd'].max()  
+    df['output_median_value_usd'] = outputs['value_usd'].median()  
+    df['output_mode_value_usd'] = outputs['value_usd'].mode()  
+    
     #total transaction value (all addresses)
+    df['tx_total_value_usd'] = tx['tx_value_usd'].sum()
+    
     df['input_mean_tx_value_btc'] = inputs['tx_value_btc'].mean()
     df['input_std_tx_value_btc'] = inputs['tx_value_btc'].std()  
     df['input_mean_tx_value_usd'] = inputs['tx_value_usd'].mean()
     df['input_std_tx_value_usd'] = inputs['tx_value_usd'].std()  
-    
+    df['input_max_tx_value_usd'] = inputs['tx_value_usd'].max() 
+    df['input_median_tx_value_usd'] = inputs['tx_value_usd'].median() 
+    df['input_mode_tx_value_usd'] = inputs['tx_value_usd'].mode() 
+      
     df['outputs_mean_tx_value_btc'] = outputs['tx_value_btc'].mean()
     df['outputs_std_tx_value_btc'] = outputs['tx_value_btc'].std()  
     df['outputs_mean_tx_value_usd'] = outputs['tx_value_usd'].mean()
     df['outputs_std_tx_value_usd'] = outputs['tx_value_usd'].std()  
-        
+    df['outputs_max_tx_value_usd'] = outputs['tx_value_usd'].max()  
+    df['outputs_median_tx_value_usd'] = outputs['tx_value_usd'].median()  
+    df['outputs_mode_tx_value_usd'] = outputs['tx_value_usd'].mode()  
+    
+    #ratio of adr value to tx value
+    df['input_p_adr_tx_value_usd'] = df['input_mean_value_usd'] / df['input_mean_tx_value_usd'] 
+    df['outputs_p_adr_tx_value_usd'] = df['output_mean_value_usd'] / df['outputs_mean_tx_value_usd'] 
+    
+    #percent marketcap
+    df['mean_value_percent_marketcap'] = df['value_percent_marketcap'].mean()
+    df['std_value_percent_marketcap'] = df['value_percent_marketcap'].std()
+    df['mean_tx_value_percent_marketcap'] = df['tx_value_percent_marketcap'].mean()
+    df['std_tx_value_percent_marketcap'] = df['tx_value_percent_marketcap'].std()
+             
+    #moments
+    
+    
     #drop unneccessary columns
     final = df.drop(['block_number', 'block_timestamp', 'value_btc', 'hash',
            'input_count', 'output_count', 'tx_value_btc',
            'balance_btc', 'date', 'value_usd', 'tx_value_usd',
-           'value_percent_marketcap', 'balance_usd', 'type'], axis = 1) 
-    
+           'value_percent_marketcap', 'tx_value_percent_marketcap'
+           'balance_usd', 'type', 
+           'CapMrktCurUSD', 'PriceUSD'], axis = 1) 
     final = final.iloc[[0]]
     return final
 
 
-#########
 df_features = pd.DataFrame()    
+all_tnx = pd.DataFrame()  
 lock = threading.Lock()
-#len(df_features)
-def start_engineer(list_address):
+
+
+def handle_threads(list_address, counter):
     df_features_local = pd.DataFrame()  
+    global all_tnx
     
     for address in list_address:
-        df = all_tnx[all_tnx['address'] == address]
+        df = all_tnx [all_tnx['address'] == address]
         final = feature_engineering(df)
         df_features_local = df_features_local.append(final)
-        print(len(df_features_local), "/" , len(list_address), 'appended', sep=" ")       
+        if(counter % 10 == 0):
+            print(len(df_features_local), "/" , len(list_address), 'appended. Thread:' , str(counter), sep=" ")       
         
     print(">>>THREAD FINISHED<<<")
-    global df_features
     with lock:
+        global df_features
         df_features = df_features.append(df_features_local)
-    
-#Load data
-btc_price_data = pd.read_csv("data/btc_price_data.csv")
-btc_price_data = btc_price_data[['date', 'CapMrktCurUSD','PriceUSD']]
-btc_price_data['date'] = pd.to_datetime(btc_price_data['date']).apply(lambda x: '{year}-{month}-{day}'.format(year=x.year, month=x.month, day=x.day))  
- 
-#trainingsdata testsample 7 classes
-all_tnx = pd.read_csv("data/testdata_30k.csv", index_col=False)
-tmp = all_tnx.drop_duplicates(subset='address')
-tmp = tmp.sample(n=10000, random_state = 1)
-all_tnx = pd.merge(all_tnx,tmp,on='address',how='inner')
-        
-#all_tnx = pd.read_csv("data/testdata_5k_exchange.csv", index_col=False)
-#df = all_tnx[all_tnx['address'] == '1AnsWKR3XnJ9cuhdugqZGvBPsfvDWxdY2N']
+  
 
-#Multithrading
-addresses = all_tnx.drop_duplicates(subset='address')['address'].to_list()
-#addresses = tmp['address']
-addresses_list = np.array_split(addresses, 50)
 
-for counter, list_address in enumerate(addresses_list):   
-    thread = threading.Thread(target=start_engineer, args=(list_address,))
-    thread.start() 
-    print('Thread started', counter, sep=" ")
    
-#Export csv with features
-df_features.to_csv("testdata_10k_features.csv", index=False)     
-  
-
-
-  
-########
+def get_features(tx, n_threads = 100):
+    global df_features
+    df_features = df_features[0:0]
     
-#Data for sql
-
-##testdataset
-offchain = pd.read_csv("data/offchain.csv", index_col=False)
-offchain = offchain.dropna(subset=['class'])
-list_addresses = offchain.sample(n=5000, random_state = 42)
-list_addresses = offchain['address' , 'class']
-list_addresses.to_csv('address_train_5k_1.csv', index=False)
-
-##exchangedata
-df = pd.read_csv("data/transactions_filtered_10MIO.csv")
-#get distinct addresses
-sender = df[['sender', 'sender_category']]
-sender.rename(columns = {"sender" : 'address', 'sender_category': 'class'}, inplace = True) 
-receiver = df[['receiver', 'receiver_category']]
-receiver.rename(columns = {"receiver" : 'address', 'receiver_category' : 'class'}, inplace = True) 
-labels = sender.append(receiver)
-#missing_labels = missing_labels[['address']]
-labels = labels.drop_duplicates(subset='address', keep='last')    
-df = labels[labels['class'] == 'Exchange']
-
-df = df.sample(frac=1).reset_index(drop=True)
-df = df[0:5000]
-df.to_csv('address_exchange_5k_1.csv', index=False)
-
-
-#Export Data
-#category = offchain[['address', 'class']]
-#df_features_2 = pd.merge(df_features,category,on='address',how='inner')
-#df_features = df_features.drop(['address'], axis = 1)     
-#df_features_2.to_csv("testdata_30k_features.csv", index=False)    
+    #Add Dollar Price       
+    btc_price_data = pd.read_csv("../data/btc_price_data.csv")
+    btc_price_data = btc_price_data[['date', 'CapMrktCurUSD','PriceUSD']]
+    btc_price_data['date'] = pd.to_datetime(btc_price_data['date']).apply(lambda x: '{year}-{month}-{day}'.format(year=x.year, month=x.month, day=x.day))  
     
+    tx['date'] = pd.to_datetime(tx['block_timestamp']).apply(lambda x: '{year}-{month}-{day}'.format(year=x.year, month=x.month, day=x.day))
+    tx = pd.merge(tx, btc_price_data, on='date', how='inner')
+    tx['value_usd'] = tx['value_btc'] * tx['PriceUSD']
+    tx['tx_value_usd'] = tx['tx_value_btc'] * tx['PriceUSD']
+    tx['value_percent_marketcap'] = (tx['value_usd'] / tx['CapMrktCurUSD']) *100
+    tx['tx_value_percent_marketcap'] = (tx['tx_value_usd'] / tx['CapMrktCurUSD']) *100
+    tx['block_timestamp'] = pd.to_datetime(tx['block_timestamp'])
+    tx['balance_btc'] = 0.0 
+    
+    #Multithrading
+    print("Split data into " + str(n_threads) + "threads")
+    global all_tnx
+    all_tnx = tx
+    addresses = all_tnx.drop_duplicates(subset='address')['address'].to_list()
+    print('Rows: ', len(addresses), sep=" ")
+    addresses_list = np.array_split(addresses, n_threads)
+    
+    threads = []
+    
+    for counter, list_address in enumerate(addresses_list):   
+        counter += 1
+        thread = threading.Thread(target=handle_threads, args=(list_address, counter))
+        threads.append(thread)
+        thread.start() 
+              
+        if(counter % 10 == 0):
+            print('Thread started', counter, sep=" ")
+        
+    for thread in threads:
+        thread.join()
+    
+    print('All Threads finished')
+    #global df_features       
+    print("Total rows", len(df_features), sep=" ")
+    
+    return df_features
 
-
+   

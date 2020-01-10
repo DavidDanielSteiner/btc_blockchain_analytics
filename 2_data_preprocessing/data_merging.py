@@ -5,7 +5,6 @@ Created on Mon Nov 11 18:33:32 2019
 @author: David
 """
 import pandas as pd
-import dask.dataframe as dd    
 
 def merge_data(btc_price_data, tnx, wallets):      
     wallets = wallets.dropna()
