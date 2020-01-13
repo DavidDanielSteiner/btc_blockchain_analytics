@@ -82,8 +82,6 @@ def get_all_tx_over_value(btc):
     print("Successfully pulled transactions from bigquery")
     return large_transactions
 
-
-
 # =============================================================================
 # get all transactions for a list of addresses
 # =============================================================================   
@@ -144,6 +142,7 @@ def get_all_tx_from_address(list_addresses):
     
     tx = result.to_dataframe() 
     tx = tx.drop(columns=['transaction_hash'])
+    print("Successfully pulled transactions from bigquery")
     return tx
   
     

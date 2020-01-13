@@ -46,17 +46,24 @@ def filter_data(data, filter_type, value):
 def get_unknown_wallets(df):
     #get addresses that have no label
     sender = df[['sender', 'sender_name']]
-    sender = sender[sender['sender_name'].isna()]
     sender.rename(columns = {"sender" : 'address'}, inplace = True) 
+    sender_known = sender[sender['sender_name'].notna()]
+    sender = sender[sender['sender_name'].isna()]
+    print(len(sender_known))
     
     receiver = df[['receiver', 'receiver_name']]
-    receiver = receiver[receiver['receiver_name'].isna()]
     receiver.rename(columns = {"receiver" : 'address'}, inplace = True) 
+    receiver_known = receiver[receiver['receiver_name'].notna()]
+    receiver = receiver[receiver['receiver_name'].isna()]
     
     missing_labels = sender.append(receiver)
     missing_labels = missing_labels[['address']]
-    missing_labels = missing_labels.drop_duplicates(keep='last')    
-    return missing_labels
+    missing_labels = missing_labels.drop_duplicates(keep='last')  
+    
+    known_labels = sender_known.append(receiver_known)
+    known_labels = known_labels[['address']]
+    known_labels = known_labels.drop_duplicates(keep='last')   
+    return missing_labels, known_labels
 
 
 def add_new_wallets(wallets, labeled_wallets):
