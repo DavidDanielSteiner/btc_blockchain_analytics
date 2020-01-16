@@ -13,7 +13,23 @@ import matplotlib.pyplot as plt
 # =============================================================================
 # LABELS
 # =============================================================================
-wallets = pd.read_csv("data/wallets.csv", index_col=False)
+#wallets = pd.read_csv("data/wallets.csv", index_col=False)
+
+addresses_known = pd.read_csv("../data/final_dataset/addresses_known_0.01_marketcap_2015.csv", index_col=False)
+addresses_predicted = pd.read_csv("../data/final_dataset/addresses_predicted_0.01_marketcap_2015.csv", index_col=False)
+wallets = addresses_known.append(addresses_predicted)
+
+labeled_tnx = pd.read_csv("../data/transactions_100BTC_labeled.csv", index_col=False)
+labeled_tnx = pd.read_csv("../data/transactions_100BTC_merged.csv", index_col=False)
+tmp = labeled_tnx[['sender_category', 'sender_name']]
+tmp = labeled_tnx[['receiver_category', 'receiver_name']]
+#tmp = tmp.fillna('unknown')  
+
+tmp = tmp.groupby(['sender_category']).agg(['count'], as_index=False).reset_index()
+tmp = labeled_tnx.head()
+known = addresses_known.groupby(['category']).agg(['count'], as_index=False).reset_index()
+predicted = addresses_predicted.groupby(['category']).agg(['count'], as_index=False).reset_index()
+
 
 #Addresses per category
 fig, ax = plt.subplots()
@@ -30,20 +46,57 @@ plt.figure(figsize = (15,40))
 order = wallets['address'].value_counts(ascending=False).index
 sns.countplot(y='owner', data=wallets, order = order) 
 
+known = addresses_known.groupby(['category']).agg(['count'], as_index=False).reset_index()
+predicted = addresses_predicted.groupby(['category']).agg(['count'], as_index=False).reset_index()
+
+
 
 # =============================================================================
 # Transactions                
 # =============================================================================
-tnx = pd.read_csv("data/transactions_10MIO.csv", index_col=False)
+tnx = pd.read_csv("../data/final_dataset/transactions_0.01_marketcap_2015.csv", index_col=False)
 
 #Preprocessing
 tnx["btc"] = tnx["btc"].astype(int)
 tnx["dollar"] = tnx["dollar"].astype(int)
-tnx = tnx.fillna('unknown')    
+#tnx = tnx.fillna('unknown')    
 tnx['block_timestamp'] = pd.to_datetime(tnx['block_timestamp']) 
 tnx['date'] = pd.to_datetime(tnx['block_timestamp']).apply(lambda x: '{year}-{month}-{day}'.format(year=x.year, month=x.month, day=x.day))   
 #tnx.sort_values(by=['date'], inplace=True, ascending=True)
 tnx.dtypes
+
+
+def merge_tnx_wallets(tnx, wallets):
+    tnx = tnx.drop(['sender_name', 'sender_category', 'receiver_name', 'receiver_category'], axis=1)
+    #Merge trnsactions with wallet labels
+    wallets = wallets.drop_duplicates(subset='address', keep='last')
+     
+    sender = pd.merge(tnx, wallets, left_on='sender', right_on='address', how='left')
+    sender.rename(columns = {"owner": "sender_name", "category":"sender_category"}, inplace = True) 
+    sender = sender.drop(['address'], axis=1)    
+    
+    receiver = pd.merge(tnx, wallets, left_on='receiver', right_on='address', how='left')
+    receiver.rename(columns = {"owner": "receiver_name", "category":"receiver_category"}, inplace = True) 
+    receiver = receiver.drop(['address'], axis=1)
+    
+    tnx = pd.merge(sender, receiver,  how='inner', on=['hash', 'block_timestamp', 'sender','receiver', 'date', 'btc', 'dollar', 'percent_marketcap', 'PriceUSD'])
+ 
+    return tnx
+
+tnx = merge_tnx_wallets(tnx, wallets)
+
+x = tnx.head()
+
+
+
+
+
+
+
+
+
+
+
 
 '''transactions with single sender / self transactions'''
 #How many senders per transaction
@@ -121,7 +174,7 @@ sns.boxplot(x=tnx_valid["receiver_category"], y=tnx_valid["percent_marketcap"], 
 #Scatterplot (Date, Dollar, BTC)
 plt.figure(figsize = (20,20))
 #plt.xlim(tnx_valid['block_timestamp'].min(), tnx_valid['block_timestamp'].max())
-plt.xlim(pd.to_datetime('2017-08-01 00:00:00+00:00'), tnx_valid['block_timestamp'].max())
+plt.xlim(pd.to_datetime('2015-01-01 00:00:00+00:00'), tnx_valid['block_timestamp'].max())
 cmap = sns.cubehelix_palette(dark=.3, light=.8, as_cmap=True)
 ax = sns.scatterplot(x="block_timestamp", y="dollar",
                       hue="receiver_category", size="btc",
@@ -133,23 +186,29 @@ ax = sns.scatterplot(x="block_timestamp", y="dollar",
 # Transaction type
 # =============================================================================
 '''categorize by transactions type'''
-tmp = tnx_valid[['hash', 'date', 'dollar', 'sender_name', 'receiver_name', 'sender_category', 'receiver_category']]
+tnx_valid.columns.values
+tmp = tnx_valid[['hash', 'date', 'dollar','percent_marketcap', 'sender_name', 'receiver_name', 'sender_category', 'receiver_category']]
 exchange_exchange = tmp[(tmp['sender_category'] == 'Exchange') &  (tmp['receiver_category'] == 'Exchange')]
-other_exchange = tmp[(tmp['sender_category'] == 'unknown') &  (tmp['receiver_category'] == 'Exchange')]
-exchange_other = tmp[(tmp['sender_category'] == 'Exchange') &  (tmp['receiver_category'] == 'unknown')]
-other_other = tmp[(tmp['sender_category'] == 'unknown') &  (tmp['receiver_category'] == 'unknown')]
+other_exchange = tmp[(tmp['sender_category'] != 'Exchange') &  (tmp['receiver_category'] == 'Exchange')]
+exchange_other = tmp[(tmp['sender_category'] == 'Exchange') &  (tmp['receiver_category'] != 'Exchange')]
+other_other = tmp[(tmp['sender_category'] != 'Exchange') &  (tmp['receiver_category'] != 'Exchange')]
 
-date_start = '2017-05-01'
-date_end = '2018-05-01'
+date_start = '2017-01-01'
+date_end = '2020-01-01'
 all_days = pd.date_range(date_start, date_end, freq='D')
 
 def prepare_for_plot(df, category):
     df['date'] = pd.to_datetime(df['date'])
-    #df = df.groupby('date').sum()
+    #df = df.groupby(['date'], as_index=False).sum()
+    df = df.groupby(['date']).sum()
     #df = df[df['dollar'] < 50000000000] #remove outliers
-    df['category'] = category    
-    #df = df.reindex(all_days)
+    df = df.reindex(all_days)
+    df['category'] = category     
+    #df = df.reset_index()
     #df.plot(figsize=(16, 8))
+    df = df.fillna(0)    
+    #df = df.reset_index()
+    #df.rename(columns = {"index": "date"}, inplace = True) 
     return df
     
 exchange_exchange = prepare_for_plot(exchange_exchange, 'exc_exc')
@@ -160,6 +219,8 @@ all_tnx = prepare_for_plot(tmp, 'all')
 
 tnx_category = pd.concat([exchange_exchange, other_exchange, exchange_other, other_other])
     
+
+
 #Addresses per category
 
 fig, ax = plt.subplots()
@@ -171,19 +232,29 @@ for p in graph.patches:
     graph.text(p.get_x()+p.get_width()/2., height + 0.1,height ,ha="center")
 plt.savefig('transaction_types.png', transparent=True)
 
-
+import requests
+import io
 #Time series by transaction type
-price = pd.read_csv("data/btc_price_data.csv") #https://coinmetrics.io/community-data-dictionary/   #https://coinmetrics.io/newdata/btc.csv
+response=requests.get('https://coinmetrics.io/newdata/btc.csv').content
+price = pd.read_csv(io.StringIO(response.decode('utf-8')))
+#price = pd.read_csv("data/btc_price_data.csv") #https://coinmetrics.io/community-data-dictionary/   #https://coinmetrics.io/newdata/btc.csv
 price['date'] = pd.to_datetime(price['date'])
 price.set_index('date', inplace=True)
 price = price[['PriceUSD']]
 price['return'] = price.pct_change(1) * 100
-price_2= pd.read_csv("data/GDAX.csv") #https://www.cryptodatadownload.com/data/northamerican/
+
+response=requests.get('https://www.cryptodatadownload.com/cdd/Bitstamp_BTCUSD_d.csv', verify=False).content
+response = response.decode('utf-8')
+response = "\n".join(response.split("\n")[1:])
+price_2 = pd.read_csv(io.StringIO(response))
+
+#price_2= pd.read_csv("data/GDAX.csv") #https://www.cryptodatadownload.com/data/northamerican/ / https://www.cryptodatadownload.com/cdd/Bitstamp_BTCUSD_d.csv
 price_2['volatility'] = (1 - (price_2['Low'] / price_2['High'])) * 100
 price_2['date'] = pd.to_datetime(price_2['Date'])
 price_2.set_index('date', inplace=True)   
 price = price.join(price_2)
 price = price.loc[date_start:date_end]
+price['dif_high_close'] = ((price['High'] - price['Close']) / price['Close']) * 100
 
 
 #Time Series Chart
@@ -201,10 +272,10 @@ volatility.plot(price.index, price['volatility'])
 change_daily.plot(price.index, price['return']) 
 change_daily.axhline(y=0, color='r', linestyle='-')
 
-tnx_vol_1.bar(other_exchange.index, other_exchange['dollar']) 
-tnx_vol_2.bar(exchange_other.index, exchange_other['dollar']) 
-tnx_vol_3.bar(other_other.index, other_other['dollar']) 
-tnx_vol_4.bar(exchange_exchange.index, exchange_exchange['dollar']) 
+tnx_vol_1.bar(other_exchange.index, other_exchange['percent_marketcap']) 
+tnx_vol_2.bar(exchange_other.index, exchange_other['percent_marketcap']) 
+tnx_vol_3.bar(other_other.index, other_other['percent_marketcap']) 
+tnx_vol_4.bar(exchange_exchange.index, exchange_exchange['percent_marketcap']) 
  
 price_top.set_title('BTC transactions per category')
 price_top.set_ylabel('Closing Price')
@@ -222,6 +293,65 @@ tnx_vol_2.axes.get_xaxis().set_visible(False)
 tnx_vol_3.axes.get_xaxis().set_visible(False)
 
 plt.savefig('transaction_types_chart.png', transparent=True)  
+
+ax = sns.barplot(x="date", y="dollar", data=exchange_other)
+
+ax = sns.barplot(x="date", y="dollar", data=other_exchange)
+
+
+#Time Series Chart
+plt.figure(figsize=(15,20))
+price_top = plt.subplot2grid((10,4), (0, 0), rowspan=2, colspan=4)
+volatility = plt.subplot2grid((10,4), (2, 0), rowspan=1, colspan=4)
+change_daily = plt.subplot2grid((10,4), (3, 0), rowspan=1, colspan=4)
+tnx_vol_1 = plt.subplot2grid((10,4), (4,0), rowspan=1, colspan=4)
+
+price_top.plot(price.index, price['PriceUSD']) 
+volatility.plot(price.index, price['volatility']) 
+change_daily.plot(price.index, price['return']) 
+change_daily.axhline(y=0, color='r', linestyle='-')
+tnx_vol_1.bar(other_exchange.index, other_exchange['dollar']) 
+
+price_top.set_title('BTC transactions per category')
+price_top.set_ylabel('Closing Price')
+volatility.set_ylabel('Daily Volatility')
+change_daily.set_ylabel('Daily Return')
+change_daily.set_ylabel('Daily Return')
+tnx_vol_1.set_ylabel('unknown_exchange')
+
+
+
+plt.savefig('transaction_types_chart.png', transparent=True)  
+
+
+############ Analysis ############
+from datetime import datetime, timedelta
+other_exchange['date'] = other_exchange.index + timedelta(days=0)
+all_tnx = pd.merge(other_exchange, price, left_on='date', right_index=True, how='inner')
+
+exchange_other['date'] = exchange_other.index + timedelta(days=0)
+all_tnx = pd.merge(exchange_other, price, left_on='date', right_index=True, how='inner')
+
+
+exchange_exchange['date'] = exchange_exchange.index + timedelta(days=0)
+all_tnx = pd.merge(exchange_exchange, price, left_on='date', right_index=True, how='inner')
+
+
+yes = all_tnx[all_tnx['dollar'] != 0]
+no = all_tnx[all_tnx['dollar'] == 0]
+
+return_all = all_tnx['return'].mean()
+return_yes = yes['return'].mean()
+return_no = no['return'].mean()
+
+
+vola_all = all_tnx['volatility'].mean()
+vola_yes = yes['volatility'].mean()
+vola_no = no['volatility'].mean()
+
+diff_all = all_tnx['dif_high_close'].mean()
+diff_yes = yes['dif_high_close'].mean()
+diff_no = no['dif_high_close'].mean()
 
 
 

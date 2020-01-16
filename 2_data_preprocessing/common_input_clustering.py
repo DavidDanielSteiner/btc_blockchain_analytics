@@ -14,7 +14,7 @@ import string
 
 def randomString(x):
     """Generate a random string of fixed length """
-    stringLength=30
+    stringLength=2
     letters = string.ascii_lowercase
     return ''.join(random.choice(letters) for i in range(stringLength))
 
@@ -25,12 +25,20 @@ def check_owner(x):
         x = x[0]
     
     length = len(x)
-    if length == 30:
+    if length == 2:
         return 'unknown'
     else:
         return x
 
 
+def remove_conflicting_tx(row):
+    if not isinstance(row['owner'], str):
+        return 'conflict'
+    else:
+        return row['owner']
+    #.values[0]
+        
+    
 def aggregate_most_common(df):
     df = df[['hash', 'owner']]
     tmp = df[df['owner'].isna()]
@@ -39,7 +47,13 @@ def aggregate_most_common(df):
     df = df.append(tmp)
     df = df.groupby(['hash'], as_index=False)['owner'].agg(pd.Series.mode) #https://stackoverflow.com/questions/15222754/groupby-pandas-dataframe-and-select-most-common-value
     df['owner'] = df['owner'].apply(check_owner)
+    df['owner'] = df.apply(remove_conflicting_tx, axis=1)
+    conflicts = df[df['owner'] == 'conflict']
+    df = df[df['owner'] != 'conflict']
+    print("Removed " + str(len(conflicts)))
+
     return df
+
 
 
 def group_transactions(df, unique=False):

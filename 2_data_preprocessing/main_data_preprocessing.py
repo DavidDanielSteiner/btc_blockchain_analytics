@@ -18,7 +18,7 @@ from data_merging import merge_data, filter_data
 response=requests.get('https://coinmetrics.io/newdata/btc.csv').content
 btc_price_data=pd.read_csv(io.StringIO(response.decode('utf-8'))) #https://coinmetrics.io/community-data-dictionary/
 transactions = pd.read_csv("../data/transactions_100BTC.csv")
-wallets = pd.read_csv("../data/btc_wallets_new.csv")
+wallets = pd.read_csv("../data/btc_wallets.csv")
 
 #Combine all data sources
 tnx = merge_data(btc_price_data, transactions, wallets)
@@ -37,21 +37,21 @@ tnx = tnx.drop(['sender_name', 'sender_category', 'receiver_name', 'receiver_cat
 #label all addresses within same transaction hash, if one address is labeled 
 labeled_wallets = pd.DataFrame()
 
-for i in range(10):
+for i in range(5):
     labeled_tnx = merge_tnx_wallets(tnx, wallets, labeled_wallets)
     df_grouped = group_transactions(labeled_tnx)
     labeled_wallets = labeled_wallets.append(regroup(df_grouped)).drop_duplicates(keep='last')
     print(len(labeled_wallets))
 
-labeled_tnx.to_csv("transactions_100BTC_labeled.csv", index=False)
-
 
 #Add cateogory to owners
 labeled_tnx = add_category(wallets, labeled_tnx)
+labeled_tnx.to_csv("transactions_100BTC_labeled.csv", index=False)
 
 #Add new addresses to btc_wallets
 btc_wallets_new = add_new_wallets(wallets, labeled_wallets)
 btc_wallets_new.to_csv("btc_wallets_new.csv", index=False)
+
 
 #Filter
 #filter_name, filtered_tnx = filter_data(labeled_tnx, filter_type = 'dollar', value=100000)

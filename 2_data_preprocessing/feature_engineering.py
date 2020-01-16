@@ -142,7 +142,7 @@ def feature_engineering(df):
     final = df.drop(['block_number', 'block_timestamp', 'value_btc', 'hash',
            'input_count', 'output_count', 'tx_value_btc',
            'balance_btc', 'date', 'value_usd', 'tx_value_usd',
-           'value_percent_marketcap', 'tx_value_percent_marketcap'
+           'value_percent_marketcap', 'tx_value_percent_marketcap',
            'balance_usd', 'type', 
            'CapMrktCurUSD', 'PriceUSD'], axis = 1) 
     final = final.iloc[[0]]

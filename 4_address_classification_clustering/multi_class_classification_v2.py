@@ -102,9 +102,11 @@ df = pd.read_csv("../data/features_all_categories.csv")
 df = df.drop(['address'], axis = 1)  
 df = df.fillna(0)
 
-df.loc[df.category == 'Service', 'category'] = 'Not_Exchange'
-df.loc[df.category == 'Mining', 'category'] = 'Not_Exchange'
-df.loc[df.category == 'Gambling', 'category'] = 'Not_Exchange'
+
+#df.loc[df.category == 'Mixer', 'category'] = 'Not_Exchange'
+#df.loc[df.category == 'Service', 'category'] = 'Not_Exchange'
+#df.loc[df.category == 'Mining', 'category'] = 'Not_Exchange'
+#df.loc[df.category == 'Gambling', 'category'] = 'Not_Exchange'
 #df['tx_per_day'] = np.where(df['tx_per_day'] == np.inf, df['n_tx'], df['tx_per_day'])
 #df = df.loc[df['class'].isin(['Exchange','Gambling','Market','Mixer','Pool'])]
 #df = df.drop(columns=df.iloc[:,6:15])
@@ -343,34 +345,50 @@ from sklearn.externals import joblib
 filename = 'model.sav'
 joblib.dump(model, filename)
 
+
+# =============================================================================
+# Predict unknown transactions
+# =============================================================================
 loaded_model = joblib.load(filename)
-result = loaded_model.score(X_test, y_test)
-print(result)
 
-
-pred = loaded_model.predict(X_test)
-y_pred = pred
-   
- 
-print(classification_report(y_test, y_pred))
-plot_confusion_matrix(loaded_model, X_test, y_test,
-                                         display_labels=labels,
-                                         values_format = '6.2f',
-                                         xticks_rotation = 'vertical',
-                                         cmap=plt.cm.Blues)
-
-
-# =============================================================================
-# Test data
-# =============================================================================
-
-df = pd.read_csv("data/testdata_5k_features_unknown.csv")
+df = pd.read_csv("../data/features_unknown.csv")
+address = df['address']
 df = df.drop(['address'], axis = 1)  
+df = df.drop(['mean_value_percent_marketcap', 'std_value_percent_marketcap', 'mean_tx_value_percent_marketcap', 'std_tx_value_percent_marketcap'], axis = 1)  
 df = df.fillna(0)
-df['class'] = 'Exchange'
-df = df.loc[df['class'].isin(['Exchange','Gambling','Market','Mixer','Pool'])]
+unknown = df
+
+
+pred = list(loaded_model.predict(unknown))
+df['category'] = pred
+df['address'] = address
+df['owner'] = 'predicted'
+ 
+
+for category_number, category_name in enumerate(labels):
+    df.loc[df.category == category_number, 'category'] = category_name
+
+
+predicted_wallets = df[['address', 'owner', 'category']]
+predicted_wallets.to_csv("addresses_predicted.csv", index=False)
+
+##############
+wallet_owners_2 = predicted_wallets.groupby(['owner', 'category']).agg(['count'], as_index=False).reset_index()
+
+df = pd.read_csv("../data/final_dataset/addresses_known_0.01_marketcap_2015.csv")
+wallet_owners_3 = df.groupby(['category']).agg(['count'], as_index=False).reset_index()
+
+
+
+###################
+
+#df['class'] = 'Exchange'
+#df = df.loc[df['class'].isin(['Exchange','Gambling','Market','Mixer','Pool'])]
 #df = df.drop(columns=df.iloc[:,6:15])
 
+
+#x = df.columns.values.tolist()
+#y = df2.columns.values.tolist()
 
 #get encoded labels
 from sklearn.preprocessing import LabelEncoder
@@ -387,6 +405,20 @@ X_test = df.loc[:, df.columns != 'class']
 y_test = df['class']
 
 
+result = loaded_model.score(X_test, y_test)
+print(result)
+
+
+pred = loaded_model.predict(X_test)
+y_pred = pred
+   
+ 
+print(classification_report(y_test, y_pred))
+plot_confusion_matrix(loaded_model, X_test, y_test,
+                                         display_labels=labels,
+                                         values_format = '6.2f',
+                                         xticks_rotation = 'vertical'
+                                         )
 # =============================================================================
 # TODO
 # =============================================================================
