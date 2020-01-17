@@ -22,7 +22,7 @@ def randomString(x):
 def check_owner(x):    
     if not isinstance(x, str):
         x = sorted(x, key=len)
-        x = x[0]
+        x = x[-1]
     
     length = len(x)
     if length == 2:
@@ -36,7 +36,6 @@ def remove_conflicting_tx(row):
         return 'conflict'
     else:
         return row['owner']
-    #.values[0]
         
     
 def aggregate_most_common(df):
@@ -47,13 +46,14 @@ def aggregate_most_common(df):
     df = df.append(tmp)
     df = df.groupby(['hash'], as_index=False)['owner'].agg(pd.Series.mode) #https://stackoverflow.com/questions/15222754/groupby-pandas-dataframe-and-select-most-common-value
     df['owner'] = df['owner'].apply(check_owner)
-    df['owner'] = df.apply(remove_conflicting_tx, axis=1)
-    conflicts = df[df['owner'] == 'conflict']
-    df = df[df['owner'] != 'conflict']
+    
+    #tmp = df[['hash', 'owner']]
+    tmp = df.groupby(['hash'], as_index=False)['owner'].agg(pd.Series.mode)  
+    tmp['owner'] = tmp.apply(remove_conflicting_tx, axis=1)
+    conflicts = tmp[tmp['owner'] == 'conflict']
+    df = tmp[tmp['owner'] != 'conflict']
     print("Removed " + str(len(conflicts)))
-
     return df
-
 
 
 def group_transactions(df, unique=False):
@@ -105,8 +105,7 @@ def add_category(wallets, labeled_tnx):
     receiver.rename(columns = {"owner": "receiver_name", "category":"receiver_category"}, inplace = True) 
     
     tnx_category = pd.merge(sender, receiver,  how='inner', on=['hash', 'block_timestamp', 'sender','receiver', 'date', 'btc', 'dollar', 'percent_marketcap', 'PriceUSD'])
-    tnx_category = tnx_category[['hash', 'block_timestamp', 'sender', 'receiver', 'btc', 'dollar', 'PriceUSD', 'percent_marketcap', 'sender_name', 'sender_category', 'receiver_name', 'receiver_category']]
-    
+    tnx_category = tnx_category[['hash', 'block_timestamp', 'sender', 'receiver', 'btc', 'dollar', 'PriceUSD', 'percent_marketcap', 'sender_name', 'sender_category', 'receiver_name', 'receiver_category']]    
     return tnx_category
 
     
@@ -123,8 +122,7 @@ def merge_tnx_wallets(tnx, wallets, new_wallets):
     receiver.rename(columns = {"owner": "receiver_name", "category":"receiver_category"}, inplace = True) 
     receiver = receiver.drop(['address'], axis=1)
     
-    tnx_labeled = pd.merge(sender, receiver,  how='inner', on=['hash', 'block_timestamp', 'sender','receiver', 'date', 'btc', 'dollar', 'percent_marketcap', 'PriceUSD'])
- 
+    tnx_labeled = pd.merge(sender, receiver,  how='inner', on=['hash', 'block_timestamp', 'sender','receiver', 'date', 'btc', 'dollar', 'percent_marketcap', 'PriceUSD']) 
     return tnx_labeled
 
 

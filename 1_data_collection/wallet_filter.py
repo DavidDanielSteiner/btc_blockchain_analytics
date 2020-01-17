@@ -26,41 +26,6 @@ wallets = wallets.append(df)
 df = pd.read_csv("data/wallets_bitinfochart_no_numbers.csv", index_col=False)
 wallets = wallets.append(df)
 
-
-#External
-df = pd.read_csv("data/addresses/Mining_full_detailed.csv", index_col=False)
-df.rename(columns = {"mining": "owner", "hashAdd":"address"}, inplace = True) 
-df['category'] = 'Pools'
-df = df[['address', 'owner', 'category']]
-wallets = wallets.append(df)
-
-df = pd.read_csv("data/addresses/Exchanges_full_detailed.csv", index_col=False)
-df.rename(columns = {"exchange": "owner", "hashAdd":"address"}, inplace = True) 
-df['category'] = 'Exchange'
-df = df[['address', 'owner', 'category']]
-wallets = wallets.append(df)
-
-df = pd.read_csv("data/addresses/Gambling_full_detailed.csv", index_col=False)
-df.rename(columns = {"gambling": "owner", "hashAdd":"address"}, inplace = True) 
-df['category'] = 'Gambling'
-df = df[['address', 'owner', 'category']]
-wallets = wallets.append(df)
-
-df = pd.read_csv("data/addresses/Historic_full_detailed.csv", index_col=False)
-df.rename(columns = {"historic": "owner", "hashAdd":"address"}, inplace = True) 
-df['category'] = 'Historic'
-df = df[['address', 'owner', 'category']]
-wallets = wallets.append(df)
-
-df = pd.read_csv("data/addresses/Services_full_detailed.csv", index_col=False)
-df.rename(columns = {"service": "owner", "hashAdd":"address"}, inplace = True) 
-df['category'] = 'Service'
-df = df[['address', 'owner', 'category']]
-wallets = wallets.append(df)
-
-
-
-
 wallets = wallets.drop_duplicates(subset='address')
 
 #wallets_1 = pd.read_csv("data/wallets_walletexplorer.csv", index_col=False)

@@ -56,7 +56,6 @@ btc_wallets_new.to_csv("btc_wallets_new.csv", index=False)
 #Filter
 #filter_name, filtered_tnx = filter_data(labeled_tnx, filter_type = 'dollar', value=100000)
 filter_name, filtered_tnx = filter_data(labeled_tnx, filter_type = 'marketcap', value=0.01)
-
 #filtered_tnx = pd.read_csv("../data/transactions_0.01_marketcap.csv")
 
 
@@ -76,18 +75,9 @@ known_addresses = pd.merge(wallets, known_addresses, how='inner', on='address')
 known_addresses.to_csv("addresses_known.csv", index=False)
 
 # =============================================================================
-# Feature engineering
+# Feature engineering trainingset
 # =============================================================================
-from feature_engineering_dask_v2 import get_features
-
-#trainingsdata testsample 7 classes
-#all_tnx = dd.read_csv("data/testdata_30k.csv")
-#tmp = all_tnx.drop_duplicates(subset='address').compute()
-#tmp = tmp.sample(n=10000, random_state = 1)['address']
-#all_tnx = dd.merge(all_tnx,tmp,on='address',how='inner')
-
-#Exhange dataset
-#all_tnx = dd.read_csv("data/testdata_5k_exchange.csv")
+from feature_engineering import get_features
 
 category_names = ['Exchange','Gambling','Service','Mixer','Mining']
 features_all_categories = pd.DataFrame()  
@@ -109,6 +99,26 @@ for category_name in category_names:
   
 #Export all features
 features_all_categories.to_csv("features_all_categories.csv", index=False) 
+
+# =============================================================================
+# Feature engineering unknown dataset
+# =============================================================================
+features_unknown = pd.DataFrame()  
+for number in range(1,11):
+    #Import csv with adr details
+    all_tnx = pd.read_csv("../data/address_unknown_chunk_" + str(1) + ".csv")    
+    
+    #create new features
+    df_features = get_features(all_tnx)    
+    
+    #append 
+    features_all_categories = features_all_categories.append(df_features)   
+    
+    #Export csv with features
+    df_features.to_csv("features_" + str(1) + ".csv", index=False)  
+  
+#Export all features
+features_unknown.to_csv("features_unknown.csv", index=False) 
 
 
 

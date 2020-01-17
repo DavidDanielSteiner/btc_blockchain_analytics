@@ -1,0 +1,50 @@
+/*external CSS file*/
+body{
+	
+}
+/*funzt*/
+div{
+	width: 90%; /* 100 % does not show the dropdown*/
+	font-family: Tahoma;
+	display: inline-block;
+	padding: 5px 5px 5px 5px;
+
+}
+
+/*funktioniert
+div div { 
+	background-color: red;
+	width: 80%;
+	display: inline-block;
+	color: grey;
+}*/
+
+/*funktioniert, nur mittige ausrichtung nicht
+display: inline-block;
+line-height: 70px;*/
+header {	
+	font-size: 40px;
+	text-align: center;
+	vertical-align: middle;
+	line-height: 90px;  
+	
+	
+}
+/*not working
+#filters{ 
+	width: 100%;
+	display: inline-block;
+	background-color: orange;
+	color: yellow;
+}*/
+.container{
+	height:100vh; 
+	
+	display: grid; 
+	grid-template-rows:200px 800px 100px; 
+	grid-template-columns:30% 55% 15%; 
+	/*grid-auto-flow: column;*/
+}
+.scatter{
+	padding: 40px;
+}

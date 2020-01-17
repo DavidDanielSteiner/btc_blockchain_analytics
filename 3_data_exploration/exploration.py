@@ -9,6 +9,8 @@ Created on Mon Nov 18 20:57:26 2019
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
+import requests
+import io
 
 # =============================================================================
 # LABELS
@@ -54,21 +56,8 @@ predicted = addresses_predicted.groupby(['category']).agg(['count'], as_index=Fa
 # =============================================================================
 # Transactions                
 # =============================================================================
-tnx = pd.read_csv("../data/final_dataset/transactions_0.01_marketcap_2015.csv", index_col=False)
-
-#Preprocessing
-tnx["btc"] = tnx["btc"].astype(int)
-tnx["dollar"] = tnx["dollar"].astype(int)
-#tnx = tnx.fillna('unknown')    
-tnx['block_timestamp'] = pd.to_datetime(tnx['block_timestamp']) 
-tnx['date'] = pd.to_datetime(tnx['block_timestamp']).apply(lambda x: '{year}-{month}-{day}'.format(year=x.year, month=x.month, day=x.day))   
-#tnx.sort_values(by=['date'], inplace=True, ascending=True)
-tnx.dtypes
-
-
 def merge_tnx_wallets(tnx, wallets):
     tnx = tnx.drop(['sender_name', 'sender_category', 'receiver_name', 'receiver_category'], axis=1)
-    #Merge trnsactions with wallet labels
     wallets = wallets.drop_duplicates(subset='address', keep='last')
      
     sender = pd.merge(tnx, wallets, left_on='sender', right_on='address', how='left')
@@ -83,21 +72,23 @@ def merge_tnx_wallets(tnx, wallets):
  
     return tnx
 
+tnx = pd.read_csv("../data/final_dataset/transactions_0.01_marketcap_2015.csv", index_col=False)
+
+#Preprocessing
+tnx["btc"] = tnx["btc"].astype(int)
+tnx["dollar"] = tnx["dollar"].astype(int)
+#tnx = tnx.fillna('unknown')    
+tnx['block_timestamp'] = pd.to_datetime(tnx['block_timestamp']) 
+tnx['date'] = pd.to_datetime(tnx['block_timestamp']).apply(lambda x: '{year}-{month}-{day}'.format(year=x.year, month=x.month, day=x.day))   
+#tnx.sort_values(by=['date'], inplace=True, ascending=True)
+#tnx.dtypes
 tnx = merge_tnx_wallets(tnx, wallets)
 
-x = tnx.head()
 
 
-
-
-
-
-
-
-
-
-
-
+# =============================================================================
+# Remove Self Transactions
+# =============================================================================
 '''transactions with single sender / self transactions'''
 #How many senders per transaction
 tmp = tnx.groupby(['hash']).nunique()
@@ -119,7 +110,6 @@ ax = sns.scatterplot(x="block_timestamp", y="dollar",
                       hue="receiver_category", size="btc",
                       palette="Set2",
                       data=self_transactions)
-
 
 
 '''grouped transactions without self transactions'''
@@ -186,43 +176,37 @@ ax = sns.scatterplot(x="block_timestamp", y="dollar",
 # Transaction type
 # =============================================================================
 '''categorize by transactions type'''
-tnx_valid.columns.values
-tmp = tnx_valid[['hash', 'date', 'dollar','percent_marketcap', 'sender_name', 'receiver_name', 'sender_category', 'receiver_category']]
-exchange_exchange = tmp[(tmp['sender_category'] == 'Exchange') &  (tmp['receiver_category'] == 'Exchange')]
-other_exchange = tmp[(tmp['sender_category'] != 'Exchange') &  (tmp['receiver_category'] == 'Exchange')]
-exchange_other = tmp[(tmp['sender_category'] == 'Exchange') &  (tmp['receiver_category'] != 'Exchange')]
-other_other = tmp[(tmp['sender_category'] != 'Exchange') &  (tmp['receiver_category'] != 'Exchange')]
 
 date_start = '2017-01-01'
 date_end = '2020-01-01'
 all_days = pd.date_range(date_start, date_end, freq='D')
 
-def prepare_for_plot(df, category):
+def preprocess_transaction_types(df, category):
     df['date'] = pd.to_datetime(df['date'])
-    #df = df.groupby(['date'], as_index=False).sum()
     df = df.groupby(['date']).sum()
-    #df = df[df['dollar'] < 50000000000] #remove outliers
     df = df.reindex(all_days)
     df['category'] = category     
-    #df = df.reset_index()
-    #df.plot(figsize=(16, 8))
     df = df.fillna(0)    
-    #df = df.reset_index()
-    #df.rename(columns = {"index": "date"}, inplace = True) 
     return df
-    
+
+tnx_valid.columns.values
+tmp = tnx_valid[['hash', 'date', 'dollar','percent_marketcap', 'sender_name', 'receiver_name', 'sender_category', 'receiver_category']]
+all_all = preprocess_transaction_types(tmp, 'all')
+exchange_exchange = preprocess_transaction_types(tmp[(tmp['sender_category'] == 'Exchange') &  (tmp['receiver_category'] == 'Exchange')], 'exc_exc')
+other_exchange = tmp[(tmp['sender_category'] != 'Exchange') &  (tmp['receiver_category'] == 'Exchange')]
+exchange_other = tmp[(tmp['sender_category'] == 'Exchange') &  (tmp['receiver_category'] != 'Exchange')]
+other_other = tmp[(tmp['sender_category'] != 'Exchange') &  (tmp['receiver_category'] != 'Exchange')]
+
+'''
 exchange_exchange = prepare_for_plot(exchange_exchange, 'exc_exc')
 other_exchange = prepare_for_plot(other_exchange, 'unk_exc')
 exchange_other = prepare_for_plot(exchange_other, 'exc_unk')
 other_other = prepare_for_plot(other_other, 'unk_unk')
 all_tnx = prepare_for_plot(tmp, 'all')
+''' 
 
+#Addresses per category  
 tnx_category = pd.concat([exchange_exchange, other_exchange, exchange_other, other_other])
-    
-
-
-#Addresses per category
-
 fig, ax = plt.subplots()
 graph = sns.countplot(x='category', data=tnx_category)
 plt.title('Transactions per transaction category')
@@ -232,32 +216,56 @@ for p in graph.patches:
     graph.text(p.get_x()+p.get_width()/2., height + 0.1,height ,ha="center")
 plt.savefig('transaction_types.png', transparent=True)
 
-import requests
-import io
-#Time series by transaction type
-response=requests.get('https://coinmetrics.io/newdata/btc.csv').content
-price = pd.read_csv(io.StringIO(response.decode('utf-8')))
-#price = pd.read_csv("data/btc_price_data.csv") #https://coinmetrics.io/community-data-dictionary/   #https://coinmetrics.io/newdata/btc.csv
-price['date'] = pd.to_datetime(price['date'])
-price.set_index('date', inplace=True)
-price = price[['PriceUSD']]
-price['return'] = price.pct_change(1) * 100
-
-response=requests.get('https://www.cryptodatadownload.com/cdd/Bitstamp_BTCUSD_d.csv', verify=False).content
-response = response.decode('utf-8')
-response = "\n".join(response.split("\n")[1:])
-price_2 = pd.read_csv(io.StringIO(response))
-
-#price_2= pd.read_csv("data/GDAX.csv") #https://www.cryptodatadownload.com/data/northamerican/ / https://www.cryptodatadownload.com/cdd/Bitstamp_BTCUSD_d.csv
-price_2['volatility'] = (1 - (price_2['Low'] / price_2['High'])) * 100
-price_2['date'] = pd.to_datetime(price_2['Date'])
-price_2.set_index('date', inplace=True)   
-price = price.join(price_2)
-price = price.loc[date_start:date_end]
-price['dif_high_close'] = ((price['High'] - price['Close']) / price['Close']) * 100
 
 
-#Time Series Chart
+#scatterplot by transaction type
+tmp = tnx_category.reset_index().dropna()
+tmp.rename(columns = {"index": "date"}, inplace = True) 
+plt.figure(figsize = (20,20))
+plt.xlim(pd.to_datetime('2015-01-01 00:00:00+00:00'), tmp['date'].max())
+ax = sns.scatterplot(x="date", y="dollar",
+                      hue="category",
+                      palette="Set1",
+                      alpha=.5, 
+                      data=tmp)
+
+#scatterplots by transaction type
+sns.set(style="ticks", color_codes=True)
+g = sns.FacetGrid(tmp, col="category", palette="GnBu_d", size=5, aspect=1.5)
+g.map(plt.scatter, "date", "dollar", alpha=.1)
+g.add_legend()
+
+
+# =============================================================================
+# Price data
+# =============================================================================
+def get_price_data():
+    response=requests.get('https://coinmetrics.io/newdata/btc.csv').content
+    price = pd.read_csv(io.StringIO(response.decode('utf-8')))
+    price['date'] = pd.to_datetime(price['date'])
+    price.set_index('date', inplace=True)
+    price = price[['PriceUSD']]
+    price['return'] = price.pct_change(1) * 100
+    
+    response=requests.get('https://www.cryptodatadownload.com/cdd/Bitstamp_BTCUSD_d.csv', verify=False).content
+    response = response.decode('utf-8')
+    response = "\n".join(response.split("\n")[1:])
+    price_2 = pd.read_csv(io.StringIO(response))
+    price_2['volatility'] = (1 - (price_2['Low'] / price_2['High'])) * 100
+    price_2['date'] = pd.to_datetime(price_2['Date'])
+    price_2.set_index('date', inplace=True)   
+    price = price.join(price_2)
+    price = price.loc[date_start:date_end]
+    price['dif_high_close'] = ((price['High'] - price['Close']) / price['Close']) * 100
+    return price
+
+price = get_price_data()
+ 
+
+
+# =============================================================================
+# Time Series Chart
+# =============================================================================
 plt.figure(figsize=(15,20))
 price_top = plt.subplot2grid((10,4), (0, 0), rowspan=2, colspan=4)
 volatility = plt.subplot2grid((10,4), (2, 0), rowspan=1, colspan=4)
@@ -294,37 +302,10 @@ tnx_vol_3.axes.get_xaxis().set_visible(False)
 
 plt.savefig('transaction_types_chart.png', transparent=True)  
 
-ax = sns.barplot(x="date", y="dollar", data=exchange_other)
 
-ax = sns.barplot(x="date", y="dollar", data=other_exchange)
-
-
-#Time Series Chart
-plt.figure(figsize=(15,20))
-price_top = plt.subplot2grid((10,4), (0, 0), rowspan=2, colspan=4)
-volatility = plt.subplot2grid((10,4), (2, 0), rowspan=1, colspan=4)
-change_daily = plt.subplot2grid((10,4), (3, 0), rowspan=1, colspan=4)
-tnx_vol_1 = plt.subplot2grid((10,4), (4,0), rowspan=1, colspan=4)
-
-price_top.plot(price.index, price['PriceUSD']) 
-volatility.plot(price.index, price['volatility']) 
-change_daily.plot(price.index, price['return']) 
-change_daily.axhline(y=0, color='r', linestyle='-')
-tnx_vol_1.bar(other_exchange.index, other_exchange['dollar']) 
-
-price_top.set_title('BTC transactions per category')
-price_top.set_ylabel('Closing Price')
-volatility.set_ylabel('Daily Volatility')
-change_daily.set_ylabel('Daily Return')
-change_daily.set_ylabel('Daily Return')
-tnx_vol_1.set_ylabel('unknown_exchange')
-
-
-
-plt.savefig('transaction_types_chart.png', transparent=True)  
-
-
-############ Analysis ############
+# =============================================================================
+# Analysis
+# =============================================================================
 from datetime import datetime, timedelta
 other_exchange['date'] = other_exchange.index + timedelta(days=0)
 all_tnx = pd.merge(other_exchange, price, left_on='date', right_index=True, how='inner')
@@ -344,7 +325,6 @@ return_all = all_tnx['return'].mean()
 return_yes = yes['return'].mean()
 return_no = no['return'].mean()
 
-
 vola_all = all_tnx['volatility'].mean()
 vola_yes = yes['volatility'].mean()
 vola_no = no['volatility'].mean()
@@ -355,22 +335,6 @@ diff_no = no['dif_high_close'].mean()
 
 
 
-#scatterplot by transaction type
-tmp = tnx_category.reset_index().dropna()
-tmp.rename(columns = {"index": "date"}, inplace = True) 
-plt.figure(figsize = (20,20))
-plt.xlim(pd.to_datetime('2015-01-01 00:00:00+00:00'), tmp['date'].max())
-ax = sns.scatterplot(x="date", y="dollar",
-                      hue="category",
-                      palette="Set1",
-                      alpha=.5, 
-                      data=tmp)
-
-#scatterplots by transaction type
-sns.set(style="ticks", color_codes=True)
-g = sns.FacetGrid(tmp, col="category", palette="GnBu_d", size=5, aspect=1.5)
-g.map(plt.scatter, "date", "dollar", alpha=.1)
-g.add_legend()
 
 
 
@@ -392,33 +356,6 @@ sns.countplot(x='receiver_category', data=tnx_valid) #countplot
 >>> ax = sns.scatterplot(x="total_bill", y="tip",
 ...                      hue="size", size="size",
 ...                      data=tips)
-
-
-plt.figure(figsize = (20,15))
-plt.xticks(rotation=45)
-ax = sns.countplot(x='receiver_name', data=tnx_valid, order = tnx_valid.receiver_name.value_counts().index) 
-
-plt.title('Distribution of  Configurations')
-plt.xlabel('Number of Axles')
-
-#self_transactions = pd.merge(tmp2, tnx, left_index=True, right_on='hash')
-#self_transactions = tnx.drop_duplicates('hash', keep='last')
-
-
-date_start = '2017-11-01'
-date_end = '2018-04-01'
-
-all_days = pd.date_range(min(tnx['date']), max(tnx['date']), freq='D')
-df = df.reindex(all_days)
-
-
-def prepare_for_plot(df, category):
-    df = df.groupby('date').sum()
-    df = df[df['dollar'] < 50000000000] #remove outliers
-    df['category'] = category    
-    
-    #df.plot(figsize=(16, 8))
-    return df
 '''
 
 
