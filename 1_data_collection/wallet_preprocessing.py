@@ -7,42 +7,34 @@ Created on Thu Dec 5 12:19:36 2019
 
 import pandas as pd
 
-wallets = pd.DataFrame()
 
 # =============================================================================
 # Data Sources
 # address, owner, category
 # =============================================================================
-df = pd.read_csv("data/offchain.csv", index_col=False)
-df = df.drop(columns=['owner'])
-df.rename(columns = {"class": "category", "name":"owner"}, inplace = True) 
-df = df[['address', 'owner', 'category']]
-df = df[df['category'] == 'Mixer' ]
-wallets = wallets.append(df)
+wallets = pd.DataFrame()
 
-df = pd.read_csv("data/wallets_walletexplorer.csv", index_col=False)
-wallets = wallets.append(df)
+adr_walletexplorer = pd.read_csv("../data/wallets_walletexplorer.csv", index_col=False)
+wallets = wallets.append(adr_walletexplorer)
 
-df = pd.read_csv("data/wallets_bitinfochart_no_numbers.csv", index_col=False)
-wallets = wallets.append(df)
+adr_bitinfocharts = pd.read_csv("../data/wallets_bitinfochart.csv", index_col=False)
+wallets = wallets.append(adr_bitinfocharts)
 
+adr_cryptoground = pd.read_csv("../data/wallets_cryptoground.csv", index_col=False)
+wallets = wallets.append(adr_cryptoground)
+
+adr_bitinfocharts_missing = pd.read_csv("../data/wallets_bitinfochart_no_numbers.csv", index_col=False)
+wallets = wallets.append(adr_bitinfocharts_missing)
+
+wallets = wallets.dropna()
+wallets = wallets[['address', 'owner', 'category']]
 wallets = wallets.drop_duplicates(subset='address')
 
-#wallets_1 = pd.read_csv("data/wallets_walletexplorer.csv", index_col=False)
-#wallets_2 = pd.read_csv("data/wallets_bitinfocharts.csv", index_col=False)
-#wallets_3 = pd.read_csv("data/wallets_bitinfocharts_missing.csv", index_col=False)
-#wallets_4 = pd.read_csv("data/wallets_cryptoground.csv", index_col=False)       
-#Merge with wallets
-#wallets = wallets[['address', 'owner', 'category']]
-#wallets = wallets.append(wallets_2.dropna())
-#wallets = wallets.append(wallets_3.dropna())
-
 # =============================================================================
-# Recategorize  
+# Recategorize specific categories
 # =============================================================================
-owner = df.drop_duplicates(subset='owner')
+owner = wallets.drop_duplicates(subset='owner')
 category = wallets.drop_duplicates(subset='category')
-
 
 wallets.loc[wallets.owner == 'MiddleEarthMarketplace', 'category'] = 'Service'
 wallets.loc[wallets.owner == 'AbraxasMarket', 'category'] = 'Service'
@@ -114,14 +106,15 @@ wallets.loc[wallets.owner == 'DPR Seized Coins 2', 'category'] = 'Service'
 wallets.loc[wallets.owner == 'F2Pool', 'category'] = 'Pools'
 wallets.loc[wallets.owner == 'HaoBTC.com', 'category'] = 'Exchange'
 wallets.loc[wallets.owner == 'Xapo.com', 'category'] = 'Exchange'
-
-#Remove Historic
 wallets.loc[wallets.category == 'Pools', 'category'] = 'Mining'
 wallets.loc[wallets.category == 'Services', 'category'] = 'Service'
-wallets = wallets[wallets['category'] != 'Historic']
 
 #Change duplicate name
 wallets.loc[wallets['owner'].str.contains('HelixMixer'), 'owner'] = 'HelixMixer'
+
+
+#Remove Historic
+wallets = wallets[wallets['category'] != 'Historic']
 
 
 # =============================================================================
@@ -132,11 +125,10 @@ wallet_owners = wallets.groupby(['owner', 'category']).agg(['count'], as_index=F
 wallet_owners.columns = ['owner', 'category', 'count']
 wallet_owners.to_csv("btc_wallets_owner.csv", index = False)
 
-
 #Export to csv
 wallets.to_csv("btc_wallets.csv", index = False)
 
-#Export to database
+#Export to database (not neccessary)
 from sqlalchemy import create_engine 
 import importlib.util
 

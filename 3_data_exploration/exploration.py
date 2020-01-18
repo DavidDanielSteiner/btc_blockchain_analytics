@@ -23,8 +23,7 @@ wallets = addresses_known.append(addresses_predicted)
 
 labeled_tnx = pd.read_csv("../data/transactions_100BTC_labeled.csv", index_col=False)
 labeled_tnx = pd.read_csv("../data/transactions_100BTC_merged.csv", index_col=False)
-tmp = labeled_tnx[['sender_category', 'sender_name']]
-tmp = labeled_tnx[['receiver_category', 'receiver_name']]
+
 #tmp = tmp.fillna('unknown')  
 
 tmp = tmp.groupby(['sender_category']).agg(['count'], as_index=False).reset_index()
@@ -51,6 +50,99 @@ sns.countplot(y='owner', data=wallets, order = order)
 known = addresses_known.groupby(['category']).agg(['count'], as_index=False).reset_index()
 predicted = addresses_predicted.groupby(['category']).agg(['count'], as_index=False).reset_index()
 
+# =============================================================================
+# Sankey diagram
+# =============================================================================
+
+from pySankey import sankey
+
+'''
+df.groupby(['hash'], as_index=False).agg(
+        Mean=('n_sender', 'sum'), 
+        Sum=('n_receiver', 'sum'),
+        Unique = 'n_receiver', 'nunique')
+        )
+'''
+
+#tnx = pd.read_csv("../data/transactions_100BTC_labeled_2.csv", index_col=False) #nrows = 1000000)
+
+tnx = filtered_tnx
+tnx = tnx.fillna('unknown') 
+tnx = tnx[(tnx['sender_name'] != 'unknown') & (tnx['receiver_name'] != 'unknown')]
+tnx.columns.values
+tnx.dtypes
+del tnx
+
+#Sankey diagram per entity
+grouped = tnx.groupby(['hash'], as_index=False)[ 'sender_name', 'receiver_name', 'sender_category', 'receiver_category'].agg(['min']).reset_index() #n_transactions = 6.92 mio
+grouped.columns = ['hash', 'sender_name', 'receiver_name', 'sender_category', 'receiver_category']
+df = grouped[['hash', 'sender_name', 'receiver_name']]
+df = df.groupby(['sender_name', 'receiver_name'], as_index=False).agg(['count']).reset_index()
+df.columns = ['sender_name', 'receiver_name', 'count']
+
+df1 = df.sort_values(by=['count'], ascending=False).reset_index(drop=True)
+df1=df1[df1['count'] >= 10]
+sankey.sankey(
+    left=df1['sender_name'], right=df1['receiver_name'], rightWeight=df1['count'],  leftWeight=df1['count'], aspect=5,
+    fontsize=4, figure_name="sankey_100BTC_entity")
+
+
+df2 = df[df['sender_name'] != df['receiver_name']]
+df2 = df2.sort_values(by=['count'], ascending=False).reset_index(drop=True)
+sankey.sankey(
+    left=df2['sender_name'], right=df2['receiver_name'], rightWeight=df2['count'],  leftWeight=df2['count'], aspect=1,
+    fontsize=4, figure_name="sankey_100BTC_entity_without_self_transactions")
+
+df2 = df[(df['sender_name'] != 'unknown') & (df['receiver_name'] != 'unknown')]
+df2 = df2.sort_values(by=['count'], ascending=False).reset_index(drop=True)
+sankey.sankey(
+    left=df2['sender_name'], right=df2['receiver_name'], rightWeight=df2['count'],  leftWeight=df2['count'], aspect=1,
+    fontsize=4, figure_name="sankey_100BTC_entity_without_unknown")
+
+df2 = df2[df2['sender_name'] != df2['receiver_name']]
+df2 = df2.sort_values(by=['count'], ascending=False).reset_index(drop=True)
+sankey.sankey(
+    left=df2['sender_name'], right=df2['receiver_name'], rightWeight=df2['count'],  leftWeight=df2['count'], aspect=1,
+    fontsize=4, figure_name="sankey_100BTC_entity_without_unknown_and_self_transactions")
+
+df2= df2[df2['count'] >= 10]
+df2 = df2.sort_values(by=['count'], ascending=False).reset_index(drop=True)
+sankey.sankey(
+    left=df2['sender_name'], right=df2['receiver_name'], rightWeight=df2['count'],  leftWeight=df2['count'], aspect=1,
+    fontsize=4, figure_name="sankey_100BTC_entity_without_unknown_and_self_transactions_and_10")
+
+
+#Sankey diagram per category
+#df = tnx.groupby(['hash'], as_index=False)['sender_category', 'receiver_category'].agg(['min']).reset_index()
+#df.columns = ['hash', 'sender_category', 'receiver_category']
+df = grouped[['hash','sender_category', 'receiver_category']]
+df = df.groupby(['sender_category', 'receiver_category'], as_index=False).agg(['count']).reset_index()
+df.columns = ['sender_category', 'receiver_category', 'count']
+
+
+df3 = df
+df3 = df3.sort_values(by=['count'], ascending=False).reset_index(drop=True)
+sankey.sankey(
+    left=df3['sender_category'], right=df3['receiver_category'], rightWeight=df3['count'],  leftWeight=df3['count'], aspect=5,
+    fontsize=6, figure_name="sankey_100BTC_category")
+
+df4 = df[(df['sender_category'] != 'unknown') & (df['receiver_category'] != 'unknown')]
+df4 = df4.sort_values(by=['count'], ascending=False).reset_index(drop=True)
+sankey.sankey(
+    left=df4['sender_category'], right=df4['receiver_category'], rightWeight=df4['count'],  leftWeight=df4['count'], aspect=5,
+    fontsize=6, figure_name="sankey_100BTC_category_without_unknown")
+
+df4 = df[df['sender_category'] != df['receiver_category']]
+df4 = df4.sort_values(by=['count'], ascending=False).reset_index(drop=True)
+sankey.sankey(
+    left=df4['sender_category'], right=df4['receiver_category'], rightWeight=df4['count'],  leftWeight=df4['count'], aspect=5,
+    fontsize=4, figure_name="sankey_100BTC_category_without_self_transactions")
+
+df4 = df4[df4['sender_category'] != df4['receiver_category']]
+df4 = df4.sort_values(by=['count'], ascending=False).reset_index(drop=True)
+sankey.sankey(
+    left=df4['sender_category'], right=df4['receiver_category'], rightWeight=df4['count'],  leftWeight=df4['count'], aspect=5,
+    fontsize=4, figure_name="sankey_100BTC_category_without_unknown_and_self_transactions")
 
 
 # =============================================================================
@@ -177,7 +269,7 @@ ax = sns.scatterplot(x="block_timestamp", y="dollar",
 # =============================================================================
 '''categorize by transactions type'''
 
-date_start = '2017-01-01'
+date_start = '2019-01-01'
 date_end = '2020-01-01'
 all_days = pd.date_range(date_start, date_end, freq='D')
 
@@ -189,22 +281,17 @@ def preprocess_transaction_types(df, category):
     df = df.fillna(0)    
     return df
 
+
 tnx_valid.columns.values
 tmp = tnx_valid[['hash', 'date', 'dollar','percent_marketcap', 'sender_name', 'receiver_name', 'sender_category', 'receiver_category']]
 all_all = preprocess_transaction_types(tmp, 'all')
 exchange_exchange = preprocess_transaction_types(tmp[(tmp['sender_category'] == 'Exchange') &  (tmp['receiver_category'] == 'Exchange')], 'exc_exc')
-other_exchange = tmp[(tmp['sender_category'] != 'Exchange') &  (tmp['receiver_category'] == 'Exchange')]
-exchange_other = tmp[(tmp['sender_category'] == 'Exchange') &  (tmp['receiver_category'] != 'Exchange')]
-other_other = tmp[(tmp['sender_category'] != 'Exchange') &  (tmp['receiver_category'] != 'Exchange')]
+other_exchange = preprocess_transaction_types(tmp[(tmp['sender_category'] != 'Exchange') &  (tmp['receiver_category'] == 'Exchange')], 'unk_exc')
+exchange_other = preprocess_transaction_types(tmp[(tmp['sender_category'] == 'Exchange') &  (tmp['receiver_category'] != 'Exchange')], 'exc_unk')
+other_other = preprocess_transaction_types(tmp[(tmp['sender_category'] != 'Exchange') &  (tmp['receiver_category'] != 'Exchange')], 'unk_unk')
+
 
 '''
-exchange_exchange = prepare_for_plot(exchange_exchange, 'exc_exc')
-other_exchange = prepare_for_plot(other_exchange, 'unk_exc')
-exchange_other = prepare_for_plot(exchange_other, 'exc_unk')
-other_other = prepare_for_plot(other_other, 'unk_unk')
-all_tnx = prepare_for_plot(tmp, 'all')
-''' 
-
 #Addresses per category  
 tnx_category = pd.concat([exchange_exchange, other_exchange, exchange_other, other_other])
 fig, ax = plt.subplots()
@@ -234,7 +321,7 @@ sns.set(style="ticks", color_codes=True)
 g = sns.FacetGrid(tmp, col="category", palette="GnBu_d", size=5, aspect=1.5)
 g.map(plt.scatter, "date", "dollar", alpha=.1)
 g.add_legend()
-
+'''
 
 # =============================================================================
 # Price data
@@ -304,42 +391,79 @@ plt.savefig('transaction_types_chart.png', transparent=True)
 
 
 # =============================================================================
-# Analysis
+# Analysis, Metrics
 # =============================================================================
-from datetime import datetime, timedelta
-other_exchange['date'] = other_exchange.index + timedelta(days=0)
-all_tnx = pd.merge(other_exchange, price, left_on='date', right_index=True, how='inner')
-
-exchange_other['date'] = exchange_other.index + timedelta(days=0)
-all_tnx = pd.merge(exchange_other, price, left_on='date', right_index=True, how='inner')
+from datetime import timedelta
 
 
-exchange_exchange['date'] = exchange_exchange.index + timedelta(days=0)
-all_tnx = pd.merge(exchange_exchange, price, left_on='date', right_index=True, how='inner')
+def analytics(df, price, mode='normal'):   
+    return_m, return_0,return_1,return_2,vola_m,vola_0,vola_1,vola_2,diff_m,diff_0,diff_1,diff_2 = ([] for i in range(12))
+    col_names = []
+    index_name = [] 
+    
+    col_names.extend(['return-1', 'return_0', 'return_1', 'return_2', 'vola-1', 'vola_0', 'vola_1', 'vola_2', 'dif-1','diff_0', 'diff_1', 'diff_2'])
+   
+    if mode == 'average':
+        index_name.append('AVERAGE')       
+    else:        
+        transaction_category = df['category'][0]
+        index_name.append(str(transaction_category + '-whale'))
+   
+    for day in range(-1,3):      
+        if mode == 'average':
+            return_whale = price['return'].mean()
+            vola_whale = price['volatility'].mean()
+            diff_whale = price['dif_high_close'].mean()
+          
+        else:    
+            df['date'] = df.index + timedelta(days=day)
+            tmp = pd.merge(df, price, left_on='date', right_index=True, how='inner')
+        
+            whale = tmp[tmp['dollar'] != 0]        
+            return_whale = whale['return'].mean()
+            vola_whale = whale['volatility'].mean()
+            diff_whale = whale['dif_high_close'].mean()
+            #other = tmp[tmp['dollar'] == 0]
+            #return_other = other['return'].mean()
+            #vola_other = other['volatility'].mean()
+            #diff_other = other['dif_high_close'].mean()
+    
+        if day == -1:
+            return_m.extend([return_whale])
+            vola_m.extend([vola_whale])
+            diff_m.extend([diff_whale])
+    
+        if day == 0:
+            return_0.extend([return_whale])
+            vola_0.extend([vola_whale])
+            diff_0.extend([diff_whale])
+                    
+        elif day == 1:
+            return_1.extend([return_whale])
+            vola_1.extend([vola_whale])
+            diff_1.extend([diff_whale])
+            
+        elif day == 2:
+            return_2.extend([return_whale])
+            vola_2.extend([vola_whale])
+            diff_2.extend([diff_whale])
+    
+    result = pd.DataFrame(list(zip(return_m,return_0, return_1, return_2,vola_m, vola_0, vola_1, vola_2, diff_m, diff_0, diff_1, diff_2)), index = index_name, columns = col_names) 
+    return result
+    
+
+df = pd.DataFrame()
+df = df.append(analytics(all_all, price, mode='average'))
+df = df.append(analytics(exchange_exchange, price))
+df = df.append(analytics(other_exchange, price))
+df = df.append(analytics(exchange_other, price))
+df = df.append(analytics(other_other, price))
 
 
-yes = all_tnx[all_tnx['dollar'] != 0]
-no = all_tnx[all_tnx['dollar'] == 0]
 
-return_all = all_tnx['return'].mean()
-return_yes = yes['return'].mean()
-return_no = no['return'].mean()
-
-vola_all = all_tnx['volatility'].mean()
-vola_yes = yes['volatility'].mean()
-vola_no = no['volatility'].mean()
-
-diff_all = all_tnx['dif_high_close'].mean()
-diff_yes = yes['dif_high_close'].mean()
-diff_no = no['dif_high_close'].mean()
-
-
-
-
-
-
-
-
+# =============================================================================
+# Other
+# =============================================================================
 
 
 '''

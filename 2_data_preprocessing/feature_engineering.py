@@ -172,7 +172,6 @@ def handle_threads(list_address, counter):
   
 
 
-   
 def get_features(tx, n_threads = 100):
     global df_features
     df_features = df_features[0:0]

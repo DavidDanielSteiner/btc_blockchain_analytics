@@ -30,16 +30,22 @@ def merge_data(btc_price_data, tnx, wallets):
     transactions = pd.merge(tnx_labeled, btc_price_data, on='date', how='inner')
     transactions['dollar'] = transactions['btc'] * transactions['PriceUSD']
     transactions['percent_marketcap'] = (transactions['dollar'] / transactions['CapMrktCurUSD']) *100   
+    transactions = transactions.drop(['CapMrktCurUSD'], axis=1)  
     return transactions
 
 
-def filter_data(data, filter_type, value):
+def filter_data(data, filter_type, value, year_start=2013, year_end=2020):
+    pd.to_numeric(data['percent_marketcap'])
+    
     if filter_type == 'dollar':
         filtered_transactions = data[data['dollar'] >= value]
     elif filter_type == 'marketcap':
         filtered_transactions = data[data['percent_marketcap'] >= value]
     
-    filter_name = str(value) + "_" + filter_type 
+    filtered_transactions['block_timestamp'] = pd.to_datetime(filtered_transactions['block_timestamp']) 
+    filtered_transactions = filtered_transactions[(filtered_transactions['block_timestamp'].dt.year >= int(year_start)) & (filtered_transactions['block_timestamp'].dt.year <= int(year_end))]
+
+    filter_name = str(value) + "_" + filter_type + "_"  + str(year_start) + "-" + str(year_end)
     return filter_name, filtered_transactions
 
 
@@ -48,21 +54,20 @@ def get_unknown_wallets(df):
     sender = df[['sender', 'sender_name']]
     sender.rename(columns = {"sender" : 'address'}, inplace = True) 
     sender_known = sender[sender['sender_name'].notna()]
-    sender = sender[sender['sender_name'].isna()]
-    print(len(sender_known))
-    
+    sender_unknown = sender[sender['sender_name'].isna()]
+
     receiver = df[['receiver', 'receiver_name']]
     receiver.rename(columns = {"receiver" : 'address'}, inplace = True) 
     receiver_known = receiver[receiver['receiver_name'].notna()]
-    receiver = receiver[receiver['receiver_name'].isna()]
+    receiver_unknown = receiver[receiver['receiver_name'].isna()]
     
-    missing_labels = sender.append(receiver)
-    missing_labels = missing_labels[['address']]
-    missing_labels = missing_labels.drop_duplicates(keep='last')  
+    missing_labels = sender_unknown.append(receiver_unknown)
+    missing_labels = missing_labels[['address']].drop_duplicates()  
+    #missing_labels = missing_labels.drop_duplicates()  
     
     known_labels = sender_known.append(receiver_known)
-    known_labels = known_labels[['address']]
-    known_labels = known_labels.drop_duplicates(keep='last')   
+    known_labels = known_labels[['address']].drop_duplicates()  
+    #known_labels = known_labels.drop_duplicates()   
     return missing_labels, known_labels
 
 

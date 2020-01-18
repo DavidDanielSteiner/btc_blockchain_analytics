@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Created on Tue Dec 23 18:40:24 2019
+Created on Tue Dec 11 18:40:24 2019
 
 @author: David
 """
@@ -12,7 +12,7 @@ import requests
 # =============================================================================
 # Merge Data
 # =============================================================================
-from data_merging import merge_data, filter_data
+from data_merging import merge_data
 
 #Import data sources
 response=requests.get('https://coinmetrics.io/newdata/btc.csv').content
@@ -24,25 +24,27 @@ wallets = pd.read_csv("../data/btc_wallets.csv")
 tnx = merge_data(btc_price_data, transactions, wallets)
 tnx.to_csv("transactions_100BTC_merged.csv", index=False)
 
-
 # =============================================================================
-# Group Transactions
+# Apply common input ownership heuristic 
+# https://en.bitcoin.it/wiki/Common-input-ownership_heuristic
+# VERY LONG RUNTIME (~10-20 houres)
 # =============================================================================
 from common_input_clustering import merge_tnx_wallets, group_transactions, regroup, add_category
-from data_merging import add_new_wallets
+from data_merging import add_new_wallets, get_unknown_wallets
 
-tnx = pd.read_csv("../data/transactions_100BTC_merged.csv", index_col=False)  
-tnx = tnx.drop(['sender_name', 'sender_category', 'receiver_name', 'receiver_category', 'CapMrktCurUSD'], axis=1)  
+#extract only neccessarry labeled addresses
+addresses_unknown, addresses_known = get_unknown_wallets(tnx) #unknown=13.5mio ; known=2.1mio
+wallets_subset = pd.merge(addresses_known, wallets, on='address', how='inner')
+wallets_subset = wallets_subset[['address', 'owner']]
 
-#label all addresses within same transaction hash, if one address is labeled 
+tnx = tnx.drop(['sender_name', 'sender_category', 'receiver_name', 'receiver_category'], axis=1)  
 labeled_wallets = pd.DataFrame()
 
 for i in range(5):
-    labeled_tnx = merge_tnx_wallets(tnx, wallets, labeled_wallets)
+    labeled_tnx = merge_tnx_wallets(tnx, wallets_subset, labeled_wallets)
     df_grouped = group_transactions(labeled_tnx)
     labeled_wallets = labeled_wallets.append(regroup(df_grouped)).drop_duplicates(keep='last')
     print(len(labeled_wallets))
-
 
 #Add cateogory to owners
 labeled_tnx = add_category(wallets, labeled_tnx)
@@ -53,29 +55,41 @@ btc_wallets_new = add_new_wallets(wallets, labeled_wallets)
 btc_wallets_new.to_csv("btc_wallets_new.csv", index=False)
 
 
+# =============================================================================
+# Filter transactions for min dollar or min percent of total marcetcap and year
+# =============================================================================
+from data_merging import merge_data, filter_data
+
+labeled_tnx = pd.read_csv("../data/transactions_100BTC_labeled_2.csv", index_col=False ) #, nrows = 1000000)
+
 #Filter
 #filter_name, filtered_tnx = filter_data(labeled_tnx, filter_type = 'dollar', value=100000)
-filter_name, filtered_tnx = filter_data(labeled_tnx, filter_type = 'marketcap', value=0.01)
-#filtered_tnx = pd.read_csv("../data/transactions_0.01_marketcap.csv")
+filter_name, filtered_tnx = filter_data(labeled_tnx, filter_type = 'marketcap', value=0.01, year_start = 2015, year_end = 2020)
+#filter_name, filtered_tnx = filter_data(labeled_tnx, filter_type = 'marketcap', value=0.00001, year_start = 2015, year_end = 2015)
+
+#remove self transaction
+tmp = filtered_tnx[filtered_tnx.groupby('hash')['sender'].transform('size') == 1]
+self_transactions = tmp[tmp['sender'] == tmp['receiver']] 
+filtered_tnx = filtered_tnx.append(self_transactions).drop_duplicates(keep=False)
 
 
-#Select transactions after 2015
-filtered_tnx['block_timestamp'] = pd.to_datetime(filtered_tnx['block_timestamp']) 
-filtered_tnx = filtered_tnx[filtered_tnx['block_timestamp'].dt.year >= 2015]
-filtered_tnx.to_csv("transactions_" + filter_name + ".csv", index=False)
+filtered_tnx.to_csv("transactions_" + filter_name  + ".csv", index=False)
+
+
 
 # =============================================================================
-# Get list of unknown addresses (for scraping)
+# Get list of unknown addresses (for scraping and feature engineering)
 # =============================================================================
 from data_merging import get_unknown_wallets
 
-unknown_addresses, known_addresses = get_unknown_wallets(filtered_tnx)
-unknown_addresses.to_csv("addresses_unknown.csv", index=False)
-known_addresses = pd.merge(wallets, known_addresses, how='inner', on='address')
-known_addresses.to_csv("addresses_known.csv", index=False)
+addresses_unknown, addresses_known = get_unknown_wallets(filtered_tnx)
+addresses_unknown.to_csv("addresses_unknown" + filter_name + ".csv", index=False)
+#addresses_known = pd.merge(wallets, addresses_known, how='inner', on='address')
+addresses_known.to_csv("addresses_known" + filter_name + ".csv", index=False)
 
 # =============================================================================
 # Feature engineering trainingset
+# VERY LONG RUNTIME (~5-10 houres)
 # =============================================================================
 from feature_engineering import get_features
 
@@ -102,11 +116,13 @@ features_all_categories.to_csv("features_all_categories.csv", index=False)
 
 # =============================================================================
 # Feature engineering unknown dataset
+# VERY LONG RUNTIME (~5-10 houres)
 # =============================================================================
 features_unknown = pd.DataFrame()  
+
 for number in range(1,11):
     #Import csv with adr details
-    all_tnx = pd.read_csv("../data/address_unknown_chunk_" + str(1) + ".csv")    
+    all_tnx = pd.read_csv("../data/address_unknown_chunk_" + str(number) + ".csv")    
     
     #create new features
     df_features = get_features(all_tnx)    
@@ -115,11 +131,9 @@ for number in range(1,11):
     features_all_categories = features_all_categories.append(df_features)   
     
     #Export csv with features
-    df_features.to_csv("features_" + str(1) + ".csv", index=False)  
+    df_features.to_csv("features_" + str(number) + ".csv", index=False)  
   
 #Export all features
 features_unknown.to_csv("features_unknown.csv", index=False) 
-
-
 
 
