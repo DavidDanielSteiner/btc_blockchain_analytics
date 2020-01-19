@@ -65,17 +65,13 @@ labeled_tnx = pd.read_csv("../data/transactions_100BTC_labeled_2.csv", index_col
 #Filter
 #filter_name, filtered_tnx = filter_data(labeled_tnx, filter_type = 'dollar', value=100000)
 filter_name, filtered_tnx = filter_data(labeled_tnx, filter_type = 'marketcap', value=0.01, year_start = 2015, year_end = 2020)
-#filter_name, filtered_tnx = filter_data(labeled_tnx, filter_type = 'marketcap', value=0.00001, year_start = 2015, year_end = 2015)
 
 #remove self transaction
 tmp = filtered_tnx[filtered_tnx.groupby('hash')['sender'].transform('size') == 1]
 self_transactions = tmp[tmp['sender'] == tmp['receiver']] 
 filtered_tnx = filtered_tnx.append(self_transactions).drop_duplicates(keep=False)
 
-
 filtered_tnx.to_csv("transactions_" + filter_name  + ".csv", index=False)
-
-
 
 # =============================================================================
 # Get list of unknown addresses (for scraping and feature engineering)
@@ -83,9 +79,19 @@ filtered_tnx.to_csv("transactions_" + filter_name  + ".csv", index=False)
 from data_merging import get_unknown_wallets
 
 addresses_unknown, addresses_known = get_unknown_wallets(filtered_tnx)
-addresses_unknown.to_csv("addresses_unknown" + filter_name + ".csv", index=False)
+addresses_unknown.to_csv("addresses_unknown_" + filter_name + ".csv", index=False)
 #addresses_known = pd.merge(wallets, addresses_known, how='inner', on='address')
-addresses_known.to_csv("addresses_known" + filter_name + ".csv", index=False)
+addresses_known.to_csv("addresses_known_" + filter_name + ".csv", index=False)
+addresses_all = addresses_unknown.append(addresses_known)
+addresses_known.to_csv("addresses_all_" + filter_name + ".csv", index=False)
+
+
+#address_df = pd.read_csv("../data/final_dataset/addresses_unknown_0.01_marketcap_2015.csv")
+#df2 = pd.read_csv("../data/addresses_unknown.csv")
+#common = pd.merge(address_df, addresses_all,on=['address'])
+#df = addresses_all[(~addresses_all.address.isin(common.address))]
+#df.to_csv("addresses_scrape_" + filter_name + ".csv", index=False)
+
 
 # =============================================================================
 # Feature engineering trainingset
@@ -120,7 +126,7 @@ features_all_categories.to_csv("features_all_categories.csv", index=False)
 # =============================================================================
 features_unknown = pd.DataFrame()  
 
-for number in range(1,11):
+for number in range(1,21):
     #Import csv with adr details
     all_tnx = pd.read_csv("../data/address_unknown_chunk_" + str(number) + ".csv")    
     
@@ -134,6 +140,9 @@ for number in range(1,11):
     df_features.to_csv("features_" + str(number) + ".csv", index=False)  
   
 #Export all features
-features_unknown.to_csv("features_unknown.csv", index=False) 
+features_unknown.to_csv("features_unknown_2.csv", index=False) 
 
 
+#features_unknown_2 = pd.read_csv("../data/address_unknown.csv") 
+#features_unknown3 = features_unknown.append(features_unknown_2)
+#features_unknown3.to_csv("features_all.csv", index=False) 

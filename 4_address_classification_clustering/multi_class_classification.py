@@ -21,7 +21,6 @@ Created on Tue Dec 17 15:04:53 2019
 
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt   
 import xgboost as xgb
 import lightgbm as lgb
 from sklearn.linear_model import LogisticRegression
@@ -29,79 +28,14 @@ from sklearn.model_selection import GridSearchCV, RandomizedSearchCV, train_test
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import classification_report, plot_confusion_matrix
 
-# =============================================================================
-# Pipeline
-# =============================================================================
-
-def algorithm_pipeline(X_train_data, X_test_data, y_train_data, y_test_data, 
-                       model, param_grid, cv=5, scoring_fit='accuracy',
-                       do_probabilities = True, model_evaluation = True, 
-                       search_mode = 'GridSearchCV', n_iterations = 10):
-    fitted_model = None
-    
-    if(search_mode == 'GridSearchCV'):
-        gs = GridSearchCV(
-            estimator=model,
-            param_grid=param_grid, 
-            cv=cv, 
-            n_jobs=-1, 
-            scoring=scoring_fit,
-            verbose=2
-        )
-        fitted_model = gs.fit(X_train_data, y_train_data)
-
-    elif (search_mode == 'RandomizedSearchCV'):
-        rs = RandomizedSearchCV(
-            estimator=model,
-            param_distributions=param_grid, 
-            cv=cv,
-            n_iter=n_iterations,
-            n_jobs=-1, 
-            scoring=scoring_fit,
-            verbose=2
-        )
-        fitted_model = rs.fit(X_train_data, y_train_data)
-    
-    print(fitted_model.best_params_)
-    print(fitted_model.best_score_)
-       
-    if(fitted_model != None):
-        if do_probabilities:
-            pred = fitted_model.predict_proba(X_test_data)
-            y_pred = np.argmax(pred, axis = 1)  
-        else:
-            pred = fitted_model.predict(X_test_data)
-            y_pred = pred
-           
-             
-    if model_evaluation:     
-        #Precision-Recall curve
-        #ROC
-        #https://scikit-learn.org/stable/modules/model_evaluation.html
-        print(classification_report(y_test, y_pred))
-
-        #Plot Confusion Matrix
-        titles_options = [("Confusion matrix", None),
-                  ("Normalized confusion matrix", 'true')]
-        for title, normalize in titles_options:
-            disp = plot_confusion_matrix(fitted_model, X_test, y_test,
-                                         display_labels=labels,
-                                         values_format = '6.2f',
-                                         xticks_rotation = 'vertical',
-                                         cmap=plt.cm.Blues,
-                                         normalize=normalize)
-            disp.ax_.set_title(title)
-                       
-    return fitted_model, pred
-
+from classification_pipeline import algorithm_pipeline
 
 # =============================================================================
 # Load dataset
 # =============================================================================
-df = pd.read_csv("../data/features_all_categories.csv")
-df = df.drop(['address'], axis = 1)  
-df = df.fillna(0)
-
+data = pd.read_csv("../data/features_trainingset_all_categories_cleaned.csv")
+data = data.drop(['address', 'is_coinbase'], axis = 1)  
+df = data.fillna(0)
 
 #df.loc[df.category == 'Mixer', 'category'] = 'Not_Exchange'
 #df.loc[df.category == 'Service', 'category'] = 'Not_Exchange'
@@ -111,14 +45,13 @@ df = df.fillna(0)
 #df = df.loc[df['class'].isin(['Exchange','Gambling','Market','Mixer','Pool'])]
 #df = df.drop(columns=df.iloc[:,6:15])
 
+
 #get encoded labels
 from sklearn.preprocessing import LabelEncoder
 labelencoder = LabelEncoder()
 df['target'] = labelencoder.fit_transform(df['category'])
 labels = df.drop_duplicates(subset='category')
 labels = (labels.sort_values(by='target')['category']).to_list()
-df.loc[df.is_coinbase == 'False', 'is_coinbase'] = 0
-df.loc[df.is_coinbase == 'True', 'is_coinbase'] = 1
 df = df.drop(columns='target')
 
 #features, targets
@@ -127,7 +60,13 @@ df['category'] = labelencoder.fit_transform(df['category'])
 X = df.loc[:, df.columns != 'category']
 y = df['category']
 
+
 '''
+#Scaling
+from sklearn.preprocessing import StandardScaler
+scaler = StandardScaler().fit(X)
+X = scaler.transform(X)
+
 # random oversampling all data
 from imblearn.over_sampling import SMOTE
 sm = SMOTE(sampling_strategy='auto')
@@ -140,21 +79,27 @@ X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_
 
 # =============================================================================
 # Logistic Regression
+#
+#Best Params: {'tol': 0.0001, 'max_iter': 5000, 'C': 1.0}
+#Accuracy: 0.48 
+#F1 macro: 0.42
 # =============================================================================
 model = LogisticRegression()
 param_grid = {
         'C':[0.5, 1.0, 2.0], 
-        'max_iter':[500, 1000, 5000], 
+        'max_iter':[1000, 5000, 8000], 
         'tol':[0.0001, 0.0002],
 }
 
 model, pred = algorithm_pipeline(X_train, X_test, y_train, y_test, model, 
                                  param_grid, cv=10, scoring_fit='accuracy',
-                                 search_mode = 'RandomizedSearchCV', n_iterations = 2)
-
-
+                                 search_mode = 'RandomizedSearchCV', n_iterations = 10,
+                                 labels=labels)
 # =============================================================================
 # Random Forest
+#Params: 
+#Accuracy: 
+#F1 macro: 
 # =============================================================================
 model = RandomForestClassifier()
 param_grid = {
@@ -165,9 +110,8 @@ param_grid = {
 
 model, pred = algorithm_pipeline(X_train, X_test, y_train, y_test, model, 
                                  param_grid, cv=10, scoring_fit='accuracy',
-                                 search_mode = 'RandomizedSearchCV', n_iterations = 1)
-
-
+                                 search_mode = 'RandomizedSearchCV', n_iterations = 10,
+                                 labels=labels)
 
 # =============================================================================
 # XBGBoost Regression
@@ -184,7 +128,8 @@ param_grid = {
 
 model, pred = algorithm_pipeline(X_train, X_test, y_train, y_test, model, 
                                  param_grid, cv=10, scoring_fit='accuracy',
-                                 search_mode = 'RandomizedSearchCV', n_iterations = 1)
+                                 search_mode = 'RandomizedSearchCV', n_iterations = 10,
+                                 labels=labels)
 
 
 # =============================================================================
@@ -192,7 +137,6 @@ model, pred = algorithm_pipeline(X_train, X_test, y_train, y_test, model,
 # =============================================================================
 model = lgb.LGBMClassifier()
 
-'''
 param_grid = {
     'n_estimators': [400, 700, 1000, 200],
     'colsample_bytree': [0.7, 0.8, 0.9],
@@ -204,13 +148,14 @@ param_grid = {
     'subsample': [0.7, 0.8, 0.9],
     'subsample_freq': [20, 40] 
 }
-'''
 
-param_grid = {'subsample_freq': [20], 'subsample': [0.7], 'reg_lambda': [1.1], 'reg_alpha': [1.2], 'num_leaves': [200], 'n_estimators': [400], 'min_split_gain': [0.3], 'max_depth': [25], 'colsample_bytree': [0.9]}
+
+#param_grid = {'subsample_freq': [20], 'subsample': [0.7], 'reg_lambda': [1.1], 'reg_alpha': [1.2], 'num_leaves': [200], 'n_estimators': [400], 'min_split_gain': [0.3], 'max_depth': [25], 'colsample_bytree': [0.9]}
 
 model, pred = algorithm_pipeline(X_train, X_test, y_train, y_test, model, 
                                  param_grid, cv=10, scoring_fit='accuracy',
-                                 search_mode = 'GridSearchCV', n_iterations = 10)
+                                 search_mode = 'GridSearchCV', n_iterations = 10,
+                                 labels=labels)
 
 #importances = model.best_estimator_.feature_importances_
 feature_importances = pd.DataFrame(model.best_estimator_.feature_importances_,
@@ -219,9 +164,8 @@ feature_importances = pd.DataFrame(model.best_estimator_.feature_importances_,
 
 
 # =============================================================================
-# 
+# Neural Network v1
 # =============================================================================
-# multi-class classification with Keras
 import pandas
 from keras.models import Sequential
 from keras.layers import Dense
@@ -232,7 +176,7 @@ from sklearn.model_selection import KFold
 from sklearn.preprocessing import LabelEncoder
 from sklearn.pipeline import Pipeline
 
-
+'''
 # define baseline model
 def baseline_model():
 	# create model
@@ -248,22 +192,21 @@ estimator = KerasClassifier(build_fn=baseline_model, epochs=200, batch_size=5, v
 kfold = KFold(n_splits=10, shuffle=True)
 results = cross_val_score(estimator, X_train, y_train, cv=kfold)
 print("Baseline: %.2f%% (%.2f%%)" % (results.mean()*100, results.std()*100))
-
+'''
 
 # =============================================================================
-# Neural Network
-# https://www.datacamp.com/community/tutorials/deep-learning-python#preprocess
+# Neural Network v2
 # =============================================================================
-df = pd.read_csv("data/testdata_30k_features.csv")
-df = df.drop(['address'], axis = 1)  
-df = df.fillna(0)
-df['tx_per_day'] = np.where(df['tx_per_day'] == np.inf, df['n_tx'], df['tx_per_day'])
-df = df.loc[df['class'].isin(['Exchange','Gambling','Market','Mixer','Pool'])]
-#df = df.drop(columns=df.iloc[:,6:15])
+df = data.fillna(0)
 
 #feature and target split
-X = df.loc[:, df.columns != 'class']
-y = df['class']
+X = df.loc[:, df.columns != 'category']
+y = df['category']
+
+#Standartization
+from sklearn.preprocessing import StandardScaler
+scaler = StandardScaler().fit(X)
+X = scaler.transform(X)
 
 #Label encoding
 from sklearn.preprocessing import LabelBinarizer
@@ -280,11 +223,6 @@ sm = SMOTE(sampling_strategy='auto')
 X_train, y_train = sm.fit_resample(X_train, y_train)
 '''
 
-#Standartization
-from sklearn.preprocessing import StandardScaler
-scaler = StandardScaler().fit(X_train)
-X_train = scaler.transform(X_train)
-X_test = scaler.transform(X_test) 
 
 from keras.models import Sequential
 from keras.layers import Dense, Dropout
@@ -334,14 +272,13 @@ print(classification_report (y_test, y_pred))
 
 
 
-
 # =============================================================================
 # Save model
 # =============================================================================
 from sklearn.externals import joblib
 
 filename = 'model.sav'
-joblib.dump(model, filename)
+joblib.dump(model, '../models/' + filename)
 
 
 # =============================================================================
@@ -377,43 +314,3 @@ df = pd.read_csv("../data/final_dataset/addresses_known_0.01_marketcap_2015.csv"
 wallet_owners_3 = df.groupby(['category']).agg(['count'], as_index=False).reset_index()
 
 
-
-###################
-
-#df['class'] = 'Exchange'
-#df = df.loc[df['class'].isin(['Exchange','Gambling','Market','Mixer','Pool'])]
-#df = df.drop(columns=df.iloc[:,6:15])
-
-
-#x = df.columns.values.tolist()
-#y = df2.columns.values.tolist()
-
-#get encoded labels
-from sklearn.preprocessing import LabelEncoder
-labelencoder = LabelEncoder()
-df['target'] = labelencoder.fit_transform(df['class'])
-labels = df.drop_duplicates(subset='class')
-labels = (labels.sort_values(by='target')['class']).to_list()
-df = df.drop(columns='target')
-
-#features, targets
-df['class'] = labelencoder.fit_transform(df['class'])
-
-X_test = df.loc[:, df.columns != 'class']
-y_test = df['class']
-
-
-result = loaded_model.score(X_test, y_test)
-print(result)
-
-
-pred = loaded_model.predict(X_test)
-y_pred = pred
-   
- 
-print(classification_report(y_test, y_pred))
-plot_confusion_matrix(loaded_model, X_test, y_test,
-                                         display_labels=labels,
-                                         values_format = '6.2f',
-                                         xticks_rotation = 'vertical'
-                                         )

@@ -8,6 +8,8 @@ Created on Mon Dec 16 14:49:53 2019
 import pandas as pd
 import threading
 import numpy as np
+import requests
+import io
 
 def feature_engineering(df):
     df = df.sort_values('block_number')    
@@ -44,8 +46,8 @@ def feature_engineering(df):
     df['p_inputs'] = len(inputs) / df['n_tx']
     
     #coinbase
-    df.loc[df.is_coinbase == 'False', 'is_coinbase'] = 0
-    df.loc[df.is_coinbase == 'True', 'is_coinbase'] = 1
+    #df.loc[df.is_coinbase == 'False', 'is_coinbase'] = 0
+    #df.loc[df.is_coinbase == 'True', 'is_coinbase'] = 1
     
     #transaction value usd category count 
     #usd_per_tx = df[['hash', 'value_usd']].groupby('hash').agg({'value_usd':'sum'})
@@ -177,7 +179,8 @@ def get_features(tx, n_threads = 100):
     df_features = df_features[0:0]
     
     #Add Dollar Price       
-    btc_price_data = pd.read_csv("../data/btc_price_data.csv")
+    response=requests.get('https://coinmetrics.io/newdata/btc.csv').content
+    btc_price_data = pd.read_csv(io.StringIO(response.decode('utf-8')))
     btc_price_data = btc_price_data[['date', 'CapMrktCurUSD','PriceUSD']]
     btc_price_data['date'] = pd.to_datetime(btc_price_data['date']).apply(lambda x: '{year}-{month}-{day}'.format(year=x.year, month=x.month, day=x.day))  
     
@@ -189,6 +192,7 @@ def get_features(tx, n_threads = 100):
     tx['tx_value_percent_marketcap'] = (tx['tx_value_usd'] / tx['CapMrktCurUSD']) *100
     tx['block_timestamp'] = pd.to_datetime(tx['block_timestamp'])
     tx['balance_btc'] = 0.0 
+    del tx['is_coinbase']
     
     #Multithrading
     print("Split data into " + str(n_threads) + "threads")
