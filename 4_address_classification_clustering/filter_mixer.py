@@ -16,13 +16,13 @@ from classification_pipeline import algorithm_pipeline
 # Load dataset
 # =============================================================================
 data = pd.read_csv("../data/features_trainingset_all_categories.csv")
-df1 = data.drop(['address', 'is_coinbase'], axis = 1)  
-df1 = df1.fillna(0)
-df1 = df1.drop(['input_mean_tx_value_btc', 'outputs_mean_tx_value_btc', 'tx_total_value_usd'], axis = 1) 
 
+df1 = data.fillna(0)
 cleaned_dataset = df1[df1['category'] == 'Mixer'][0:9500]
 category_list = ['Exchange', 'Mining', 'Service', 'Gambling']
 
+df1 = df1.drop(['input_mean_tx_value_btc', 'outputs_mean_tx_value_btc', 'tx_total_value_usd', 'input_mean_tx_value_usd', 'mean_tx_value_percent_marketcap', 'mean_value_percent_marketcap'], axis = 1) 
+df1 = df1.drop(['address'], axis = 1)  
 
 for category in category_list:
     df = df1[(df1['category'] == 'Mixer') | (df1['category'] == category) ]
@@ -56,6 +56,7 @@ for category in category_list:
                                      search_mode = 'GridSearchCV', n_iterations = 10, 
                                      labels=labels)
     
+    
 # =============================================================================
 # Remove Mixer from categories
 # =============================================================================
@@ -63,8 +64,7 @@ for category in category_list:
     df2 = data[data['category'] == category]
     df2 = df2.rename(columns={'category': 'category_orig'})
     address = df2['address']
-    
-    remove = df2[['address', 'is_coinbase', 'category_orig', 'input_mean_tx_value_btc', 'outputs_mean_tx_value_btc', 'tx_total_value_usd']]
+    remove = df2[['input_mean_tx_value_btc', 'outputs_mean_tx_value_btc', 'tx_total_value_usd', 'input_mean_tx_value_usd', 'mean_tx_value_percent_marketcap', 'mean_value_percent_marketcap', 'address', 'category_orig']]
     df2 = df2.drop(remove.columns.values, axis = 1)   
     df2 = df2.fillna(0)
     predicted = df2

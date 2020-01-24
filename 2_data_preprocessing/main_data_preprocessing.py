@@ -18,7 +18,7 @@ from data_merging import merge_data
 response=requests.get('https://coinmetrics.io/newdata/btc.csv').content
 btc_price_data=pd.read_csv(io.StringIO(response.decode('utf-8'))) #https://coinmetrics.io/community-data-dictionary/
 transactions = pd.read_csv("../data/transactions_100BTC.csv")
-wallets = pd.read_csv("../data/btc_wallets.csv")
+wallets = pd.read_csv("../data/btc_wallets_new.csv")
 
 #Combine all data sources
 tnx = merge_data(btc_price_data, transactions, wallets)
@@ -33,7 +33,8 @@ from common_input_clustering import merge_tnx_wallets, group_transactions, regro
 from data_merging import add_new_wallets, get_unknown_wallets
 
 #extract only neccessarry labeled addresses
-addresses_unknown, addresses_known = get_unknown_wallets(tnx) #unknown=13.5mio ; known=2.1mio
+#tnx = pd.read_csv("../data/transactions_100BTC_merged.csv")
+addresses_unknown, addresses_known = get_unknown_wallets(tnx) #unknown=13.3mio ; known=2.3mio
 wallets_subset = pd.merge(addresses_known, wallets, on='address', how='inner')
 wallets_subset = wallets_subset[['address', 'owner']]
 
@@ -60,7 +61,7 @@ btc_wallets_new.to_csv("btc_wallets_new.csv", index=False)
 # =============================================================================
 from data_merging import merge_data, filter_data
 
-labeled_tnx = pd.read_csv("../data/transactions_100BTC_labeled_2.csv", index_col=False ) #, nrows = 1000000)
+#labeled_tnx = pd.read_csv("../data/transactions_100BTC_labeled.csv", index_col=False ) #, nrows = 1000000)
 
 #Filter
 #filter_name, filtered_tnx = filter_data(labeled_tnx, filter_type = 'dollar', value=100000)
@@ -83,7 +84,7 @@ addresses_unknown.to_csv("addresses_unknown_" + filter_name + ".csv", index=Fals
 #addresses_known = pd.merge(wallets, addresses_known, how='inner', on='address')
 addresses_known.to_csv("addresses_known_" + filter_name + ".csv", index=False)
 addresses_all = addresses_unknown.append(addresses_known)
-addresses_known.to_csv("addresses_all_" + filter_name + ".csv", index=False)
+addresses_all.to_csv("addresses_all_" + filter_name + ".csv", index=False)
 
 
 #address_df = pd.read_csv("../data/final_dataset/addresses_unknown_0.01_marketcap_2015.csv")
@@ -101,7 +102,6 @@ from feature_engineering import get_features
 
 category_names = ['Exchange','Gambling','Service','Mixer','Mining']
 features_all_categories = pd.DataFrame()  
-category_name = 'Mining'
 
 for category_name in category_names:
     #Import csv with adr details
@@ -122,27 +122,23 @@ features_all_categories.to_csv("features_all_categories.csv", index=False)
 
 # =============================================================================
 # Feature engineering unknown dataset
-# VERY LONG RUNTIME (~5-10 houres)
+# VERY LONG RUNTIME (~24-48 houres)
 # =============================================================================
 features_unknown = pd.DataFrame()  
 
-for number in range(1,21):
+for number in range(2,5):
     #Import csv with adr details
     all_tnx = pd.read_csv("../data/address_unknown_chunk_" + str(number) + ".csv")    
     
     #create new features
     df_features = get_features(all_tnx)    
     
-    #append 
-    features_all_categories = features_all_categories.append(df_features)   
-    
     #Export csv with features
     df_features.to_csv("features_" + str(number) + ".csv", index=False)  
-  
+    print(str(number), "exported", sep=" ")
+    
+    #append 
+    features_unknown = features_unknown.append(df_features)   
+    
 #Export all features
-features_unknown.to_csv("features_unknown_2.csv", index=False) 
-
-
-#features_unknown_2 = pd.read_csv("../data/address_unknown.csv") 
-#features_unknown3 = features_unknown.append(features_unknown_2)
-#features_unknown3.to_csv("features_all.csv", index=False) 
+features_unknown.to_csv("features_unknown.csv", index=False) 

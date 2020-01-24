@@ -7,7 +7,6 @@ Created on Thu Dec 5 12:19:36 2019
 
 import pandas as pd
 
-
 # =============================================================================
 # Data Sources
 # address, owner, category
@@ -33,8 +32,8 @@ wallets = wallets.drop_duplicates(subset='address')
 # =============================================================================
 # Recategorize specific categories
 # =============================================================================
-owner = wallets.drop_duplicates(subset='owner')
-category = wallets.drop_duplicates(subset='category')
+#owner = wallets.drop_duplicates(subset='owner')
+#category = wallets.drop_duplicates(subset='category')
 
 wallets.loc[wallets.owner == 'MiddleEarthMarketplace', 'category'] = 'Service'
 wallets.loc[wallets.owner == 'AbraxasMarket', 'category'] = 'Service'
@@ -109,9 +108,23 @@ wallets.loc[wallets.owner == 'Xapo.com', 'category'] = 'Exchange'
 wallets.loc[wallets.category == 'Pools', 'category'] = 'Mining'
 wallets.loc[wallets.category == 'Services', 'category'] = 'Service'
 
+#
+wallets.loc[wallets.owner == 'Xapo.com-2', 'owner'] = 'Xapo.com'
+wallets.loc[wallets.owner == 'BTCC.com-old2', 'owner'] = 'BTCC.com'
+wallets.loc[wallets.owner == 'BTCC.com-old', 'owner'] = 'BTCC.com'
+
 #Change duplicate name
 wallets.loc[wallets['owner'].str.contains('HelixMixer'), 'owner'] = 'HelixMixer'
-
+wallets.loc[wallets['owner'].str.contains('Bitstamp'), 'owner'] = 'Bitstamp'
+wallets.loc[wallets['owner'].str.contains('BitPay.com'), 'owner'] = 'BitPay.com'
+wallets.loc[wallets['owner'].str.contains('Bitfinex'), 'owner'] = 'Bitfinex'
+wallets.loc[wallets['owner'].str.contains('Binance'), 'owner'] = 'Binance'
+wallets.loc[wallets['owner'].str.contains('Cryptsy'), 'owner'] = 'Cryptsy'
+wallets.loc[wallets['owner'].str.contains('Coincheck'), 'owner'] = 'Coincheck'
+wallets.loc[wallets['owner'].str.contains('Xapo.com'), 'owner'] = 'Xapo.com'
+wallets.loc[wallets['owner'].str.contains('BTCC.com'), 'owner'] = 'BTCC.com'
+wallets.loc[wallets['owner'].str.contains('Poloniex'), 'owner'] = 'Poloniex'
+wallets.loc[wallets['owner'].str.contains('Coincheck'), 'owner'] = 'Coincheck'
 
 #Remove Historic
 wallets = wallets[wallets['category'] != 'Historic']

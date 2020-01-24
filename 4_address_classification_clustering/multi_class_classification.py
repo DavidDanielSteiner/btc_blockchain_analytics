@@ -33,17 +33,17 @@ from classification_pipeline import algorithm_pipeline
 # =============================================================================
 # Load dataset
 # =============================================================================
+#data = pd.read_csv("../data/features_all_categories.csv")
 data = pd.read_csv("../data/features_trainingset_all_categories_cleaned.csv")
-data = data.drop(['address', 'is_coinbase'], axis = 1)  
 df = data.fillna(0)
-
-#df.loc[df.category == 'Mixer', 'category'] = 'Not_Exchange'
-#df.loc[df.category == 'Service', 'category'] = 'Not_Exchange'
-#df.loc[df.category == 'Mining', 'category'] = 'Not_Exchange'
-#df.loc[df.category == 'Gambling', 'category'] = 'Not_Exchange'
-#df['tx_per_day'] = np.where(df['tx_per_day'] == np.inf, df['n_tx'], df['tx_per_day'])
-#df = df.loc[df['class'].isin(['Exchange','Gambling','Market','Mixer','Pool'])]
-#df = df.drop(columns=df.iloc[:,6:15])
+data = data[['address', 'category'
+,'lifetime', 'n_tx', 'n_inputs', 'n_outputs', 'p_inputs', 'mean_inputs', 'mean_outputs', 'p_payback', 'std_inputs', 'std_outputs', 'tx_per_day'
+,'std_tx_value_percent_marketcap', 'mean_tx_value_percent_marketcap', 'std_value_percent_marketcap', 'mean_value_percent_marketcap'
+,'std_balance_btc', 'mean_balance_btc', 'adr_inputs_btc', 'adr_outputs_btc'
+,'input_mean_value_btc', 'input_std_value_btc', 'input_mean_tx_value_btc', 'input_std_tx_value_btc'
+,'output_mean_value_btc', 'output_std_value_btc', 'outputs_mean_tx_value_btc', 'outputs_std_tx_value_btc'
+,'adr_dif_usd', 'p_adr_dif_usd', 'input_p_adr_tx_value_usd', 'outputs_p_adr_tx_value_usd',  'input_max_tx_value_usd', 'input_max_value_usd','max_balance_usd']]
+df = data.drop(['address'], axis = 1)  
 
 
 #get encoded labels
@@ -66,7 +66,6 @@ y = df['category']
 from sklearn.preprocessing import StandardScaler
 scaler = StandardScaler().fit(X)
 X = scaler.transform(X)
-
 # random oversampling all data
 from imblearn.over_sampling import SMOTE
 sm = SMOTE(sampling_strategy='auto')
@@ -95,22 +94,23 @@ model, pred = algorithm_pipeline(X_train, X_test, y_train, y_test, model,
                                  param_grid, cv=10, scoring_fit='accuracy',
                                  search_mode = 'RandomizedSearchCV', n_iterations = 10,
                                  labels=labels)
+
 # =============================================================================
 # Random Forest
-#Params: 
-#Accuracy: 
-#F1 macro: 
+#Params: {'n_estimators': 500, 'max_leaf_nodes': 500, 'max_depth': 24}
+#Accuracy: 0.81
+#F1 macro: 81
 # =============================================================================
 model = RandomForestClassifier()
 param_grid = {
-    'n_estimators': [2000, 3000, 5000],
+    'n_estimators': [200, 300, 500],
     'max_depth': [18,20,22,24],
-    'max_leaf_nodes': [600, 800]
+    'max_leaf_nodes': [300, 500]
 }
 
 model, pred = algorithm_pipeline(X_train, X_test, y_train, y_test, model, 
                                  param_grid, cv=10, scoring_fit='accuracy',
-                                 search_mode = 'RandomizedSearchCV', n_iterations = 10,
+                                 search_mode = 'RandomizedSearchCV', n_iterations = 20,
                                  labels=labels)
 
 # =============================================================================
@@ -128,7 +128,7 @@ param_grid = {
 
 model, pred = algorithm_pipeline(X_train, X_test, y_train, y_test, model, 
                                  param_grid, cv=10, scoring_fit='accuracy',
-                                 search_mode = 'RandomizedSearchCV', n_iterations = 10,
+                                 search_mode = 'RandomizedSearchCV', n_iterations = 20,
                                  labels=labels)
 
 
@@ -138,14 +138,14 @@ model, pred = algorithm_pipeline(X_train, X_test, y_train, y_test, model,
 model = lgb.LGBMClassifier()
 
 param_grid = {
-    'n_estimators': [400, 700, 1000, 200],
-    'colsample_bytree': [0.7, 0.8, 0.9],
-    'max_depth': [15,20,25, 40, 60, 100],
-    'num_leaves': [50, 100, 200, 500, 1000],
+    'n_estimators': [200, 400, 700, 1000],
+    'colsample_bytree': [0.8, 0.9, 1],
+    'max_depth': [15,20,25, 40, 60],
+    'num_leaves': [150, 200, 250, 300],
     'reg_alpha': [1.1, 1.2, 1.3],
-    'reg_lambda': [1.1, 1.2, 1.3],
+    'reg_lambda': [1, 1.1, 1.2],
     'min_split_gain': [0.3, 0.4],
-    'subsample': [0.7, 0.8, 0.9],
+    'subsample': [0.6, 0.7, 0.8],
     'subsample_freq': [20, 40] 
 }
 
@@ -154,7 +154,7 @@ param_grid = {
 
 model, pred = algorithm_pipeline(X_train, X_test, y_train, y_test, model, 
                                  param_grid, cv=10, scoring_fit='accuracy',
-                                 search_mode = 'GridSearchCV', n_iterations = 10,
+                                 search_mode = 'GridSearchCV', n_iterations = 20,
                                  labels=labels)
 
 #importances = model.best_estimator_.feature_importances_
@@ -284,12 +284,12 @@ joblib.dump(model, '../models/' + filename)
 # =============================================================================
 # Predict unknown transactions
 # =============================================================================
-loaded_model = joblib.load(filename)
+loaded_model = joblib.load('../models/' + filename)
 
-df = pd.read_csv("../data/features_unknown.csv")
+df = pd.read_csv("../data/features_unknown_batch_1.csv")
 address = df['address']
 df = df.drop(['address'], axis = 1)  
-df = df.drop(['mean_value_percent_marketcap', 'std_value_percent_marketcap', 'mean_tx_value_percent_marketcap', 'std_tx_value_percent_marketcap'], axis = 1)  
+#df = df.drop(['mean_value_percent_marketcap', 'std_value_percent_marketcap', 'mean_tx_value_percent_marketcap', 'std_tx_value_percent_marketcap'], axis = 1)  
 df = df.fillna(0)
 unknown = df
 
@@ -308,8 +308,8 @@ predicted_wallets = df[['address', 'owner', 'category']]
 predicted_wallets.to_csv("addresses_predicted.csv", index=False)
 
 ##############
-wallet_owners_2 = predicted_wallets.groupby(['owner', 'category']).agg(['count'], as_index=False).reset_index()
 
+wallet_owners_2 = predicted_wallets.groupby(['owner', 'category']).agg(['count'], as_index=False).reset_index()
 df = pd.read_csv("../data/final_dataset/addresses_known_0.01_marketcap_2015.csv")
 wallet_owners_3 = df.groupby(['category']).agg(['count'], as_index=False).reset_index()
 
