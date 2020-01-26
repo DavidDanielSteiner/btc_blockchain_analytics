@@ -159,6 +159,17 @@ x = known.drop_duplicates()
 x = data.drop_duplicates(subset='address')
 
 wallets = pd.read_csv("../data/btc_wallets_new.csv")
+known = pd.read_csv("../data/features_known.csv")
+
+known_features = pd.merge(wallets, known, on='address')
+
+tmp=known_features[['owner', 'category','address']]
+
+x = tmp.groupby(['owner', 'category']).agg(['count'], as_index=False).reset_index()
+
+
+known_features.to_csv("features_validation.csv", index=False) 
+
 
 tmp = pd.merge(wallets, unknown, how='inner', on='address')
 

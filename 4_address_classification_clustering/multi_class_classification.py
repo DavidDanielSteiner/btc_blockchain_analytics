@@ -34,7 +34,7 @@ from classification_pipeline import algorithm_pipeline
 # Load dataset
 # =============================================================================
 #data = pd.read_csv("../data/features_all_categories.csv")
-data = pd.read_csv("../data/features_trainingset_all_categories_cleaned.csv")
+data = pd.read_csv("../data/features_trainingset_all_categories.csv")
 df = data.fillna(0)
 data = data[['address', 'category'
 ,'lifetime', 'n_tx', 'n_inputs', 'n_outputs', 'p_inputs', 'mean_inputs', 'mean_outputs', 'p_payback', 'std_inputs', 'std_outputs', 'tx_per_day'
@@ -56,7 +56,6 @@ df = df.drop(columns='target')
 
 #features, targets
 df['category'] = labelencoder.fit_transform(df['category'])
-
 X = df.loc[:, df.columns != 'category']
 y = df['category']
 
@@ -150,11 +149,11 @@ param_grid = {
 }
 
 
-#param_grid = {'subsample_freq': [20], 'subsample': [0.7], 'reg_lambda': [1.1], 'reg_alpha': [1.2], 'num_leaves': [200], 'n_estimators': [400], 'min_split_gain': [0.3], 'max_depth': [25], 'colsample_bytree': [0.9]}
+param_grid = {'subsample_freq': [20], 'subsample': [0.7], 'reg_lambda': [1.1], 'reg_alpha': [1.2], 'num_leaves': [200], 'n_estimators': [400], 'min_split_gain': [0.3], 'max_depth': [25], 'colsample_bytree': [0.9]}
 
 model, pred = algorithm_pipeline(X_train, X_test, y_train, y_test, model, 
                                  param_grid, cv=10, scoring_fit='accuracy',
-                                 search_mode = 'GridSearchCV', n_iterations = 20,
+                                 search_mode = 'GridSearchCV', n_iterations = 1,
                                  labels=labels)
 
 #importances = model.best_estimator_.feature_importances_
@@ -162,20 +161,9 @@ feature_importances = pd.DataFrame(model.best_estimator_.feature_importances_,
                                    index = X_train.columns,
                                    columns=['importance']).sort_values('importance', ascending=False)
 
-
 # =============================================================================
 # Neural Network v1
 # =============================================================================
-import pandas
-from keras.models import Sequential
-from keras.layers import Dense
-from keras.wrappers.scikit_learn import KerasClassifier
-from keras.utils import np_utils
-from sklearn.model_selection import cross_val_score
-from sklearn.model_selection import KFold
-from sklearn.preprocessing import LabelEncoder
-from sklearn.pipeline import Pipeline
-
 '''
 # define baseline model
 def baseline_model():
@@ -197,7 +185,14 @@ print("Baseline: %.2f%% (%.2f%%)" % (results.mean()*100, results.std()*100))
 # =============================================================================
 # Neural Network v2
 # =============================================================================
-df = data.fillna(0)
+from keras.models import Sequential
+from keras.layers import Dense
+from keras.wrappers.scikit_learn import KerasClassifier
+from keras.utils import np_utils
+from sklearn.model_selection import cross_val_score
+from sklearn.model_selection import KFold
+from sklearn.preprocessing import LabelEncoder
+from sklearn.pipeline import Pipeline
 
 #feature and target split
 X = df.loc[:, df.columns != 'category']
@@ -215,13 +210,6 @@ y = encoder.fit_transform(y)
 
 #test, train split
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-
-'''
-# random oversampling training data
-from imblearn.over_sampling import SMOTE
-sm = SMOTE(sampling_strategy='auto')
-X_train, y_train = sm.fit_resample(X_train, y_train)
-'''
 
 
 from keras.models import Sequential
@@ -271,7 +259,6 @@ f1_score(y_test,y_pred, average='weighted')
 print(classification_report (y_test, y_pred))
 
 
-
 # =============================================================================
 # Save model
 # =============================================================================
@@ -281,25 +268,62 @@ filename = 'model.sav'
 joblib.dump(model, '../models/' + filename)
 
 
+
+# =============================================================================
+# Test with validation set
+# =============================================================================
+loaded_model = joblib.load('../models/' + 'model.sav')
+
+data = pd.read_csv("../data/features_validation.csv")
+validation = data[['address', 'category', 'owner']]
+
+df = data.fillna(0)
+df = df[['address', 'category'
+,'lifetime', 'n_tx', 'n_inputs', 'n_outputs', 'p_inputs', 'mean_inputs', 'mean_outputs', 'p_payback', 'std_inputs', 'std_outputs', 'tx_per_day'
+,'std_tx_value_percent_marketcap', 'mean_tx_value_percent_marketcap', 'std_value_percent_marketcap', 'mean_value_percent_marketcap'
+,'std_balance_btc', 'mean_balance_btc', 'adr_inputs_btc', 'adr_outputs_btc'
+,'input_mean_value_btc', 'input_std_value_btc', 'input_mean_tx_value_btc', 'input_std_tx_value_btc'
+,'output_mean_value_btc', 'output_std_value_btc', 'outputs_mean_tx_value_btc', 'outputs_std_tx_value_btc'
+,'adr_dif_usd', 'p_adr_dif_usd', 'input_p_adr_tx_value_usd', 'outputs_p_adr_tx_value_usd',  'input_max_tx_value_usd', 'input_max_value_usd','max_balance_usd']]
+df = df.drop(['address', 'category'], axis = 1)  
+
+pred = list(loaded_model.predict(df))
+df['category'] = pred
+df['category_real'] = validation['category']
+df['address'] = validation['address']
+df['owner'] = validation['owner']
+ 
+
+for category_number, category_name in enumerate(labels):
+    df.loc[df.category == category_number, 'category'] = category_name
+
+view = df[['address', 'owner', 'category', 'category_real']] #,
+
+from sklearn.metrics import accuracy_score
+accuracy_score(df['category_real'], df['category'])
+
 # =============================================================================
 # Predict unknown transactions
 # =============================================================================
 loaded_model = joblib.load('../models/' + filename)
 
-df = pd.read_csv("../data/features_unknown_batch_1.csv")
+data = pd.read_csv("../data/features_unknown.csv")
+df = data.fillna(0)
 address = df['address']
+df = df[['address'
+,'lifetime', 'n_tx', 'n_inputs', 'n_outputs', 'p_inputs', 'mean_inputs', 'mean_outputs', 'p_payback', 'std_inputs', 'std_outputs', 'tx_per_day'
+,'std_tx_value_percent_marketcap', 'mean_tx_value_percent_marketcap', 'std_value_percent_marketcap', 'mean_value_percent_marketcap'
+,'std_balance_btc', 'mean_balance_btc', 'adr_inputs_btc', 'adr_outputs_btc'
+,'input_mean_value_btc', 'input_std_value_btc', 'input_mean_tx_value_btc', 'input_std_tx_value_btc'
+,'output_mean_value_btc', 'output_std_value_btc', 'outputs_mean_tx_value_btc', 'outputs_std_tx_value_btc'
+,'adr_dif_usd', 'p_adr_dif_usd', 'input_p_adr_tx_value_usd', 'outputs_p_adr_tx_value_usd',  'input_max_tx_value_usd', 'input_max_value_usd','max_balance_usd']]
 df = df.drop(['address'], axis = 1)  
-#df = df.drop(['mean_value_percent_marketcap', 'std_value_percent_marketcap', 'mean_tx_value_percent_marketcap', 'std_tx_value_percent_marketcap'], axis = 1)  
-df = df.fillna(0)
-unknown = df
 
-
-pred = list(loaded_model.predict(unknown))
+pred = list(loaded_model.predict(df))
 df['category'] = pred
 df['address'] = address
 df['owner'] = 'predicted'
  
-
 for category_number, category_name in enumerate(labels):
     df.loc[df.category == category_number, 'category'] = category_name
 
@@ -309,8 +333,9 @@ predicted_wallets.to_csv("addresses_predicted.csv", index=False)
 
 ##############
 
-wallet_owners_2 = predicted_wallets.groupby(['owner', 'category']).agg(['count'], as_index=False).reset_index()
+wallet_owners_2 = view.groupby(['owner', 'category']).agg(['count'], as_index=False).reset_index()
+wallet_owners_2 = view.groupby(['category_real']).agg(['count'], as_index=False).reset_index()
 df = pd.read_csv("../data/final_dataset/addresses_known_0.01_marketcap_2015.csv")
 wallet_owners_3 = df.groupby(['category']).agg(['count'], as_index=False).reset_index()
 
-
+wallet_owners_2

@@ -141,15 +141,3 @@ wallet_owners.to_csv("btc_wallets_owner.csv", index = False)
 #Export to csv
 wallets.to_csv("btc_wallets.csv", index = False)
 
-#Export to database (not neccessary)
-from sqlalchemy import create_engine 
-import importlib.util
-
-spec = importlib.util.spec_from_file_location("module.name", "C:/Users/David/Dropbox/Code/config.py")
-config = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(config)
-DB_CREDENTIALS = config.sqlalchemy_DATASTIG_CRYPTO  
-engine = create_engine(DB_CREDENTIALS)
-
-wallets.to_sql("btc_wallets", engine, index=False, if_exists='append') 
-
