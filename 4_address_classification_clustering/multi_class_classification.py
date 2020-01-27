@@ -114,6 +114,7 @@ model, pred = algorithm_pipeline(X_train, X_test, y_train, y_test, model,
 
 # =============================================================================
 # XBGBoost Regression
+# Accuracy 0.844
 # =============================================================================
 model = xgb.XGBClassifier()
 param_grid = {
@@ -127,12 +128,14 @@ param_grid = {
 
 model, pred = algorithm_pipeline(X_train, X_test, y_train, y_test, model, 
                                  param_grid, cv=10, scoring_fit='accuracy',
-                                 search_mode = 'RandomizedSearchCV', n_iterations = 20,
+                                 search_mode = 'RandomizedSearchCV', n_iterations = 5,
                                  labels=labels)
 
 
 # =============================================================================
 # LightGBM
+# Accuracy 0.844
+#param_grid = {'subsample_freq': [20], 'subsample': [0.7], 'reg_lambda': [1.1], 'reg_alpha': [1.2], 'num_leaves': [300], 'n_estimators': [1000], 'min_split_gain': [0.3], 'max_depth': [20], 'colsample_bytree': [0.9]}
 # =============================================================================
 model = lgb.LGBMClassifier()
 
@@ -149,11 +152,11 @@ param_grid = {
 }
 
 
-param_grid = {'subsample_freq': [20], 'subsample': [0.7], 'reg_lambda': [1.1], 'reg_alpha': [1.2], 'num_leaves': [200], 'n_estimators': [400], 'min_split_gain': [0.3], 'max_depth': [25], 'colsample_bytree': [0.9]}
+#param_grid = {'subsample_freq': [20], 'subsample': [0.7], 'reg_lambda': [1.1], 'reg_alpha': [1.2], 'num_leaves': [300], 'n_estimators': [1000], 'min_split_gain': [0.3], 'max_depth': [20], 'colsample_bytree': [0.9]}
 
 model, pred = algorithm_pipeline(X_train, X_test, y_train, y_test, model, 
                                  param_grid, cv=10, scoring_fit='accuracy',
-                                 search_mode = 'GridSearchCV', n_iterations = 1,
+                                 search_mode = 'RandomizedSearchCV', n_iterations = 30,
                                  labels=labels)
 
 #importances = model.best_estimator_.feature_importances_
@@ -264,15 +267,16 @@ print(classification_report (y_test, y_pred))
 # =============================================================================
 from sklearn.externals import joblib
 
-filename = 'model.sav'
+filename = 'GBM.sav'
 joblib.dump(model, '../models/' + filename)
 
 
 
 # =============================================================================
 # Test with validation set
+# GBM Accuracy: 0.883
 # =============================================================================
-loaded_model = joblib.load('../models/' + 'model.sav')
+loaded_model = joblib.load('../models/' + 'GBM.sav')
 
 data = pd.read_csv("../data/features_validation.csv")
 validation = data[['address', 'category', 'owner']]
@@ -298,14 +302,17 @@ for category_number, category_name in enumerate(labels):
     df.loc[df.category == category_number, 'category'] = category_name
 
 view = df[['address', 'owner', 'category', 'category_real']] #,
+wallet_owners_real = view.groupby(['category_real']).agg(['count'], as_index=False).reset_index()
+wallet_owners_predicted = view.groupby(['category']).agg(['count'], as_index=False).reset_index()
 
 from sklearn.metrics import accuracy_score
 accuracy_score(df['category_real'], df['category'])
 
+
 # =============================================================================
 # Predict unknown transactions
 # =============================================================================
-loaded_model = joblib.load('../models/' + filename)
+loaded_model = joblib.load('../models/' + 'GBM.sav')
 
 data = pd.read_csv("../data/features_unknown.csv")
 df = data.fillna(0)
@@ -327,15 +334,7 @@ df['owner'] = 'predicted'
 for category_number, category_name in enumerate(labels):
     df.loc[df.category == category_number, 'category'] = category_name
 
-
 predicted_wallets = df[['address', 'owner', 'category']]
-predicted_wallets.to_csv("addresses_predicted.csv", index=False)
+wallet_owners = predicted_wallets.groupby(['category']).agg(['count'], as_index=False).reset_index()
 
-##############
-
-wallet_owners_2 = view.groupby(['owner', 'category']).agg(['count'], as_index=False).reset_index()
-wallet_owners_2 = view.groupby(['category_real']).agg(['count'], as_index=False).reset_index()
-df = pd.read_csv("../data/final_dataset/addresses_known_0.01_marketcap_2015.csv")
-wallet_owners_3 = df.groupby(['category']).agg(['count'], as_index=False).reset_index()
-
-wallet_owners_2
+predicted_wallets.to_csv("wallets_predicted.csv", index=False)

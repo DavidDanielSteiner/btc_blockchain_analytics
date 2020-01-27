@@ -13,24 +13,22 @@ import requests
 import io
 
 # =============================================================================
-# LABELS
+# LABELS / WALLETS
 # =============================================================================
-#wallets = pd.read_csv("data/wallets.csv", index_col=False)
 
-addresses_known = pd.read_csv("../data/final_dataset/addresses_known_0.01_marketcap_2015.csv", index_col=False)
-addresses_predicted = pd.read_csv("../data/final_dataset/addresses_predicted_0.01_marketcap_2015.csv", index_col=False)
-wallets = addresses_known.append(addresses_predicted)
+wallets_all = pd.read_csv("data/btc_wallets_new.csv", index_col=False)
+wallets_predicted = pd.read_csv("data/btc_wallets_predicted.csv", index_col=False)
 
-labeled_tnx = pd.read_csv("../data/transactions_100BTC_labeled.csv", index_col=False)
-labeled_tnx = pd.read_csv("../data/transactions_100BTC_merged.csv", index_col=False)
+wallets = wallets_all.append(wallets_predicted)
+wallets = wallets.drop_duplicates(subset='address', keep='first')
 
+predicted = wallets_predicted.groupby(['category']).agg(['count'], as_index=False).reset_index()
+
+#addresses_known = pd.read_csv("../data/final_dataset/addresses_known_0.01_marketcap_2015.csv", index_col=False)
+#addresses_predicted = pd.read_csv("../data/final_dataset/addresses_predicted_0.01_marketcap_2015.csv", index_col=False)
+#labeled_tnx = pd.read_csv("../data/transactions_100BTC_labeled.csv", index_col=False)
+#labeled_tnx = pd.read_csv("../data/transactions_100BTC_merged.csv", index_col=False)
 #tmp = tmp.fillna('unknown')  
-
-tmp = tmp.groupby(['sender_category']).agg(['count'], as_index=False).reset_index()
-tmp = labeled_tnx.head()
-known = addresses_known.groupby(['category']).agg(['count'], as_index=False).reset_index()
-predicted = addresses_predicted.groupby(['category']).agg(['count'], as_index=False).reset_index()
-
 
 #Addresses per category
 fig, ax = plt.subplots()
@@ -50,6 +48,73 @@ sns.countplot(y='owner', data=wallets, order = order)
 known = addresses_known.groupby(['category']).agg(['count'], as_index=False).reset_index()
 predicted = addresses_predicted.groupby(['category']).agg(['count'], as_index=False).reset_index()
 
+
+# =============================================================================
+# Transactions                
+# =============================================================================
+def merge_tnx_wallets(tnx, wallets):
+    tnx = tnx.drop(['sender_name', 'sender_category', 'receiver_name', 'receiver_category'], axis=1)
+    wallets = wallets.drop_duplicates(subset='address', keep='last')
+     
+    sender = pd.merge(tnx, wallets, left_on='sender', right_on='address', how='left')
+    sender.rename(columns = {"owner": "sender_name", "category":"sender_category"}, inplace = True) 
+    sender = sender.drop(['address'], axis=1)    
+    
+    receiver = pd.merge(tnx, wallets, left_on='receiver', right_on='address', how='left')
+    receiver.rename(columns = {"owner": "receiver_name", "category":"receiver_category"}, inplace = True) 
+    receiver = receiver.drop(['address'], axis=1)
+    
+    tnx = pd.merge(sender, receiver,  how='inner', on=['hash', 'block_timestamp', 'sender','receiver', 'date', 'btc', 'dollar', 'percent_marketcap', 'PriceUSD'])
+ 
+    return tnx
+
+tnx = pd.read_csv("../data/tmp/transactions_0.01_marketcap_2015-2020.csv", index_col=False) #1019673
+
+#Preprocessing
+tnx["btc"] = tnx["btc"].astype(int)
+tnx["dollar"] = tnx["dollar"].astype(int)
+#tnx = tnx.fillna('unknown')    
+tnx['block_timestamp'] = pd.to_datetime(tnx['block_timestamp']) 
+tnx['date'] = pd.to_datetime(tnx['block_timestamp']).apply(lambda x: '{year}-{month}-{day}'.format(year=x.year, month=x.month, day=x.day))   
+#tnx.sort_values(by=['date'], inplace=True, ascending=True)
+#tnx.dtypes
+tnx = merge_tnx_wallets(tnx, wallets)
+
+#group by hash
+tnx = tnx.groupby(['hash'], as_index=False).first()
+# =============================================================================
+# Remove Self Transactions
+# =============================================================================
+'''transactions with single sender / self transactions'''
+#How many senders per transaction
+#tmp = tnx.groupby(['hash']).nunique()
+#sns.boxplot(x=tmp["sender"])
+
+#self transactions
+tmp = tnx[tnx.groupby('hash')['sender'].transform('size') == 1]
+self_transactions = tmp[tmp['sender'] == tmp['receiver']] #43484 self transactions
+
+sns.countplot(x='receiver_category', data=self_transactions) 
+sns.countplot(y='receiver_name', data=self_transactions, order= self_transactions['receiver_name'].value_counts(ascending=False).index) 
+sns.boxplot(x=self_transactions["dollar"], y=self_transactions["receiver_name"], showfliers=False, order = self_transactions.groupby("receiver_name")["dollar"].median().fillna(0).sort_values()[::-1].index) 
+
+#Scatterplot (Date, Dollar, BTC)
+plt.figure(figsize = (20,20))
+plt.xlim(self_transactions['block_timestamp'].min(), self_transactions['block_timestamp'].max())
+cmap = sns.cubehelix_palette(dark=.3, light=.8, as_cmap=True)
+ax = sns.scatterplot(x="block_timestamp", y="dollar",
+                      hue="receiver_category", size="btc",
+                      palette="Set2",
+                      data=self_transactions)
+
+
+'''grouped transactions without self transactions'''
+tnx_all = tnx.groupby(['hash'], as_index=False).first()
+tnx = pd.concat([tnx_all, self_transactions]).drop_duplicates(keep=False)
+
+
+
+
 # =============================================================================
 # Sankey diagram
 # =============================================================================
@@ -65,13 +130,12 @@ df.groupby(['hash'], as_index=False).agg(
 '''
 
 #tnx = pd.read_csv("../data/transactions_100BTC_labeled_2.csv", index_col=False) #nrows = 1000000)
-
-tnx = filtered_tnx
+#tnx = filtered_tnx
 tnx = tnx.fillna('unknown') 
-tnx = tnx[(tnx['sender_name'] != 'unknown') & (tnx['receiver_name'] != 'unknown')]
-tnx.columns.values
+#tnx = tnx[(tnx['sender_name'] != 'unknown') & (tnx['receiver_name'] != 'unknown')]
+#tnx.columns.values
 tnx.dtypes
-del tnx
+#del tnx
 
 #Sankey diagram per entity
 grouped = tnx.groupby(['hash'], as_index=False)[ 'sender_name', 'receiver_name', 'sender_category', 'receiver_category'].agg(['min']).reset_index() #n_transactions = 6.92 mio
@@ -145,69 +209,14 @@ sankey.sankey(
     fontsize=4, figure_name="sankey_100BTC_category_without_unknown_and_self_transactions")
 
 
-# =============================================================================
-# Transactions                
-# =============================================================================
-def merge_tnx_wallets(tnx, wallets):
-    tnx = tnx.drop(['sender_name', 'sender_category', 'receiver_name', 'receiver_category'], axis=1)
-    wallets = wallets.drop_duplicates(subset='address', keep='last')
-     
-    sender = pd.merge(tnx, wallets, left_on='sender', right_on='address', how='left')
-    sender.rename(columns = {"owner": "sender_name", "category":"sender_category"}, inplace = True) 
-    sender = sender.drop(['address'], axis=1)    
-    
-    receiver = pd.merge(tnx, wallets, left_on='receiver', right_on='address', how='left')
-    receiver.rename(columns = {"owner": "receiver_name", "category":"receiver_category"}, inplace = True) 
-    receiver = receiver.drop(['address'], axis=1)
-    
-    tnx = pd.merge(sender, receiver,  how='inner', on=['hash', 'block_timestamp', 'sender','receiver', 'date', 'btc', 'dollar', 'percent_marketcap', 'PriceUSD'])
- 
-    return tnx
-
-tnx = pd.read_csv("../data/final_dataset/transactions_0.01_marketcap_2015.csv", index_col=False)
-
-#Preprocessing
-tnx["btc"] = tnx["btc"].astype(int)
-tnx["dollar"] = tnx["dollar"].astype(int)
-#tnx = tnx.fillna('unknown')    
-tnx['block_timestamp'] = pd.to_datetime(tnx['block_timestamp']) 
-tnx['date'] = pd.to_datetime(tnx['block_timestamp']).apply(lambda x: '{year}-{month}-{day}'.format(year=x.year, month=x.month, day=x.day))   
-#tnx.sort_values(by=['date'], inplace=True, ascending=True)
-#tnx.dtypes
-tnx = merge_tnx_wallets(tnx, wallets)
-
 
 
 # =============================================================================
-# Remove Self Transactions
+# Exploration
 # =============================================================================
-'''transactions with single sender / self transactions'''
-#How many senders per transaction
-tmp = tnx.groupby(['hash']).nunique()
-sns.boxplot(x=tmp["sender"])
-
-#self transactions
-tmp = tnx[tnx.groupby('hash')['sender'].transform('size') == 1]
-self_transactions = tmp[tmp['sender'] == tmp['receiver']] #43484 self transactions
-
-sns.countplot(x='receiver_category', data=self_transactions) 
-sns.countplot(y='receiver_name', data=self_transactions, order= self_transactions['receiver_name'].value_counts(ascending=False).index) 
-sns.boxplot(x=self_transactions["dollar"], y=self_transactions["receiver_name"], showfliers=False, order = self_transactions.groupby("receiver_name")["dollar"].median().fillna(0).sort_values()[::-1].index) 
-
-#Scatterplot (Date, Dollar, BTC)
-plt.figure(figsize = (20,20))
-plt.xlim(self_transactions['block_timestamp'].min(), self_transactions['block_timestamp'].max())
-cmap = sns.cubehelix_palette(dark=.3, light=.8, as_cmap=True)
-ax = sns.scatterplot(x="block_timestamp", y="dollar",
-                      hue="receiver_category", size="btc",
-                      palette="Set2",
-                      data=self_transactions)
 
 
-'''grouped transactions without self transactions'''
-tnx_all = tnx.groupby(['hash'], as_index=False).first()
-tnx_valid = pd.concat([tnx_all, self_transactions]).drop_duplicates(keep=False)
-tnx_valid.to_csv("transactions_valid.csv")
+#tnx_valid.to_csv("transactions_valid.csv")
 
 #Total Transactions per category
 fig, ax = plt.subplots()
@@ -269,12 +278,13 @@ ax = sns.scatterplot(x="block_timestamp", y="dollar",
 # =============================================================================
 '''categorize by transactions type'''
 
-date_start = '2019-01-01'
+date_start = '2018-01-01'
 date_end = '2020-01-01'
 all_days = pd.date_range(date_start, date_end, freq='D')
 
 def preprocess_transaction_types(df, category):
     df['date'] = pd.to_datetime(df['date'])
+    df = df[df['percent_marketcap'] >= 0.025]
     df = df.groupby(['date']).sum()
     df = df.reindex(all_days)
     df['category'] = category     
@@ -282,13 +292,17 @@ def preprocess_transaction_types(df, category):
     return df
 
 
-tnx_valid.columns.values
-tmp = tnx_valid[['hash', 'date', 'dollar','percent_marketcap', 'sender_name', 'receiver_name', 'sender_category', 'receiver_category']]
+#tnx_valid.columns.values
+tmp = tnx[['hash', 'date', 'dollar','percent_marketcap', 'sender_name', 'receiver_name', 'sender_category', 'receiver_category']]
+
+#x = tmp[(tmp['sender_category'] == 'Mixer') |  (tmp['receiver_category'] == 'Mixer')]
+#tmp = tmp[(tmp['sender_name'] != 'predicted')  &  (tmp['receiver_name'] != 'predicted')]
+
 all_all = preprocess_transaction_types(tmp, 'all')
-exchange_exchange = preprocess_transaction_types(tmp[(tmp['sender_category'] == 'Exchange') &  (tmp['receiver_category'] == 'Exchange')], 'exc_exc')
-other_exchange = preprocess_transaction_types(tmp[(tmp['sender_category'] != 'Exchange') &  (tmp['receiver_category'] == 'Exchange')], 'unk_exc')
-exchange_other = preprocess_transaction_types(tmp[(tmp['sender_category'] == 'Exchange') &  (tmp['receiver_category'] != 'Exchange')], 'exc_unk')
-other_other = preprocess_transaction_types(tmp[(tmp['sender_category'] != 'Exchange') &  (tmp['receiver_category'] != 'Exchange')], 'unk_unk')
+exchange_exchange = preprocess_transaction_types(tmp[(tmp['sender_category'] == 'Exchange') &  (tmp['receiver_category'] == 'Exchange')], 'exchange_exchange')
+other_exchange = preprocess_transaction_types(tmp[(tmp['sender_category'] != 'Exchange') &  (tmp['receiver_category'] == 'Exchange')], 'other_exchange')
+exchange_other = preprocess_transaction_types(tmp[(tmp['sender_category'] == 'Exchange') &  (tmp['receiver_category'] != 'Exchange')], 'exchange_other')
+other_other = preprocess_transaction_types(tmp[(tmp['sender_category'] != 'Exchange') &  (tmp['receiver_category'] != 'Exchange')], 'other_other')
 
 
 '''
@@ -407,7 +421,7 @@ def analytics(df, price, mode='normal'):
         index_name.append('AVERAGE')       
     else:        
         transaction_category = df['category'][0]
-        index_name.append(str(transaction_category + '-whale'))
+        index_name.append(str(transaction_category))
    
     for day in range(-1,3):      
         if mode == 'average':
@@ -454,9 +468,9 @@ def analytics(df, price, mode='normal'):
 
 df = pd.DataFrame()
 df = df.append(analytics(all_all, price, mode='average'))
-df = df.append(analytics(exchange_exchange, price))
 df = df.append(analytics(other_exchange, price))
 df = df.append(analytics(exchange_other, price))
+df = df.append(analytics(exchange_exchange, price))
 df = df.append(analytics(other_other, price))
 
 
