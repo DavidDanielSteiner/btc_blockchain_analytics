@@ -19,7 +19,7 @@ def algorithm_pipeline(X_train_data, X_test_data, y_train_data, y_test_data,
                        model, param_grid, cv=5, scoring_fit='accuracy',
                        do_probabilities = True, model_evaluation = True, 
                        search_mode = 'GridSearchCV', n_iterations = 10, labels=None):
-    """Optimized Pipeline for Gridsearch/RandomizedSearch and Model evaluation"""
+    """Pipeline for Gridsearch/RandomizedSearch and Model evaluation"""
     
     fitted_model = None
     

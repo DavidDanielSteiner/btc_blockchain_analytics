@@ -22,15 +22,12 @@ client = bigquery.Client()
 def get_atts(obj, filter=""):
     """Helper function wich prints the public attributes and methods of the given object.
     Can filter the results for simple term.
-    - `obj`: the Python object of interest
-    - `filter`, str: The filter term
     """
     return [a for a in dir(obj) if not a.startswith('_') and filter in a]
 
 
 def estimate_gigabytes_scanned(query, bq_client):
-    """A useful function to estimate query size. 
-    Originally from here: https://www.kaggle.com/sohier/beyond-queries-exploring-the-bigquery-api/
+    """A function to estimate query size. 
     """
     my_job_config = bigquery.job.QueryJobConfig()
     my_job_config.dry_run = True
@@ -40,11 +37,13 @@ def estimate_gigabytes_scanned(query, bq_client):
     print(f"This query will process {estimate} GBs.")
 
 
-
 # =============================================================================
 # get transactions with max transaction value
 # =============================================================================
 def get_all_tx_over_value(btc):    
+    """Pulls all transactions where the receiver of the transaction received
+    more than a specified BTC value
+    """
     btc_satoshi = 100000000 #btc in satoshi    
     satoshi_amount = btc * btc_satoshi
     
@@ -78,15 +77,17 @@ def get_all_tx_over_value(btc):
     )
     result = query_job.result()
     
-    large_transactions = result.to_dataframe()   
+    tx = result.to_dataframe()   
     print("Successfully pulled transactions from bigquery")
-    return large_transactions
+    return tx
 
 # =============================================================================
 # get all transactions for a list of addresses
 # =============================================================================   
 def get_all_tx_from_address(list_addresses):
-#get transaction overview from list of wallets
+    """Pulls the complete transaction history from a list of specified 
+    BTC addresses 
+    """
 
     query = """
     SELECT 

@@ -3,8 +3,8 @@ Name of Quantlet: '3_address_classification'
 
 Published in: 'DEDA_Class_2019WS'
 
-Description: 'Scraping and preprocessing of labeled btc addresses from differen websites.
-Collection of specified transactions from a full bitcoin blockchain node hosted on Google Big Query'
+Description: 'Multi Class Address Classification of unknown Bitcoin Addresses through the full 
+transaction history of every address and the previously computed features.'
 
 Keywords: 'Bitcoin, Blockchain, Transactions, Machine Learning, Classification, XGB, LightGBM'
 
