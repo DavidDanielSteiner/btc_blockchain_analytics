@@ -29,11 +29,10 @@ tnx.to_csv("transactions_100BTC_merged.csv", index=False)
 # https://en.bitcoin.it/wiki/Common-input-ownership_heuristic
 # VERY LONG RUNTIME (~10-20 houres)
 # =============================================================================
-from common_input_clustering import merge_tnx_wallets, group_transactions, regroup, add_category
+from common_input_heuristic import merge_tnx_wallets, group_transactions, regroup, add_category
 from data_merging import add_new_wallets, get_unknown_wallets
 
 #extract only neccessarry labeled addresses
-#tnx = pd.read_csv("../data/transactions_100BTC_merged.csv")
 addresses_unknown, addresses_known = get_unknown_wallets(tnx) #unknown=13.3mio ; known=2.3mio
 wallets_subset = pd.merge(addresses_known, wallets, on='address', how='inner')
 wallets_subset = wallets_subset[['address', 'owner']]
@@ -41,6 +40,7 @@ wallets_subset = wallets_subset[['address', 'owner']]
 tnx = tnx.drop(['sender_name', 'sender_category', 'receiver_name', 'receiver_category'], axis=1)  
 labeled_wallets = pd.DataFrame()
 
+#Common input heuristic algorithm
 for i in range(5):
     labeled_tnx = merge_tnx_wallets(tnx, wallets_subset, labeled_wallets)
     df_grouped = group_transactions(labeled_tnx)
@@ -61,10 +61,7 @@ btc_wallets_new.to_csv("btc_wallets_new.csv", index=False)
 # =============================================================================
 from data_merging import merge_data, filter_data
 
-#labeled_tnx = pd.read_csv("../data/transactions_100BTC_labeled.csv", index_col=False ) #, nrows = 1000000)
-
 #Filter
-#filter_name, filtered_tnx = filter_data(labeled_tnx, filter_type = 'dollar', value=100000)
 filter_name, filtered_tnx = filter_data(labeled_tnx, filter_type = 'marketcap', value=0.01, year_start = 2015, year_end = 2020)
 
 #remove self transaction
@@ -81,18 +78,9 @@ from data_merging import get_unknown_wallets
 
 addresses_unknown, addresses_known = get_unknown_wallets(filtered_tnx)
 addresses_unknown.to_csv("addresses_unknown_" + filter_name + ".csv", index=False)
-#addresses_known = pd.merge(wallets, addresses_known, how='inner', on='address')
 addresses_known.to_csv("addresses_known_" + filter_name + ".csv", index=False)
 addresses_all = addresses_unknown.append(addresses_known)
 addresses_all.to_csv("addresses_all_" + filter_name + ".csv", index=False)
-
-
-#address_df = pd.read_csv("../data/final_dataset/addresses_unknown_0.01_marketcap_2015.csv")
-#df2 = pd.read_csv("../data/addresses_unknown.csv")
-#common = pd.merge(address_df, addresses_all,on=['address'])
-#df = addresses_all[(~addresses_all.address.isin(common.address))]
-#df.to_csv("addresses_scrape_" + filter_name + ".csv", index=False)
-
 
 # =============================================================================
 # Feature engineering trainingset

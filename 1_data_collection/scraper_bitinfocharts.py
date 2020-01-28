@@ -9,7 +9,9 @@ import pandas as pd
 import requests
 from bs4 import BeautifulSoup
 
-
+# =============================================================================
+# Scraper
+# =============================================================================
 df_btc_wallets = pd.DataFrame()
 res = requests.get("https://bitinfocharts.com/top-100-richest-bitcoin-addresses.html")
 soup = BeautifulSoup(res.content,'lxml')
@@ -18,7 +20,6 @@ soup = BeautifulSoup(res.content,'lxml')
 table = soup.find_all('table')[2] 
 df = pd.read_html(str(table))
 df_top = df[0]
-#header = list(df_top.columns.values)
 header = ['ranking', 'address_full', 'balance', 'percentage_coins', 'first_in', 'last_in', 'number_ins', 'first_out', 'last_out', 'number_outs']
 df_top.columns = header
 
@@ -52,10 +53,14 @@ for page in range(2, 101):
     df_btc_wallets = df_btc_wallets.append(df_bottom)
 
 
-"""Data Cleaning"""
+# =============================================================================
+# Data Cleaning
+# =============================================================================
 df = df_btc_wallets
 
 def get_owner(address_full):
+    """Removes unneccessary chars and numbers from the enity name
+    """
     address_full.replace('  ', ' ')
     wallet_owner = address_full.split(' ')[-1]    
     numbers = sum(c.isdigit() for c in wallet_owner)
@@ -74,8 +79,7 @@ def check_wallet_type(row):
     '''
     
     if row['owner'] != "unknown":
-        return "Exchange"
-    
+        return "Exchange"   
     #elif row['number_ins'] >= 200:
     #    return "EXCHANGE"
     #elif row['balance'] >= 10000:
@@ -83,17 +87,17 @@ def check_wallet_type(row):
     #else:
     #    return "BIG_FISH"
 
-
 df["address_full"] = df["address_full"].apply(lambda x: x.replace('wallet:', ' '))
 df["owner"] = df["address_full"].apply(get_owner)
 df["address"] = df["address_full"].apply(lambda x: x.split(' ')[0])
-
 df["balance"] = df["balance"].apply(lambda x: x.split(' ')[0])
 df["balance"] = df["balance"].replace(regex=[','], value='')
 df["balance"] = pd.to_numeric(df["balance"])
-
 df['category'] = df.apply(check_wallet_type, axis=1)
 
+# =============================================================================
+# Export
+# =============================================================================
 df.to_csv('wallets_cleaned.csv', index = False)
 df = df[['address', 'owner', 'category']]
 df.to_csv('wallets_bitinfocharts.csv', index = False)

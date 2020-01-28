@@ -6,15 +6,9 @@ Created on Sun Jan 19 13:48:16 2020
 """
 
 import numpy as np
-import pandas as pd
 import matplotlib.pyplot as plt   
-import xgboost as xgb
-import lightgbm as lgb
-from sklearn.linear_model import LogisticRegression
-from sklearn.model_selection import GridSearchCV, RandomizedSearchCV, train_test_split
-from sklearn.ensemble import RandomForestClassifier
+from sklearn.model_selection import GridSearchCV, RandomizedSearchCV
 from sklearn.metrics import classification_report, plot_confusion_matrix
-
 
 
 # =============================================================================
@@ -25,6 +19,7 @@ def algorithm_pipeline(X_train_data, X_test_data, y_train_data, y_test_data,
                        model, param_grid, cv=5, scoring_fit='accuracy',
                        do_probabilities = True, model_evaluation = True, 
                        search_mode = 'GridSearchCV', n_iterations = 10, labels=None):
+    """Optimized Pipeline for Gridsearch/RandomizedSearch and Model evaluation"""
     
     fitted_model = None
     
@@ -64,9 +59,6 @@ def algorithm_pipeline(X_train_data, X_test_data, y_train_data, y_test_data,
            
              
     if model_evaluation:     
-        #Precision-Recall curve
-        #ROC
-        #https://scikit-learn.org/stable/modules/model_evaluation.html
         print(classification_report(y_test_data, y_pred))
 
         #Plot Confusion Matrix

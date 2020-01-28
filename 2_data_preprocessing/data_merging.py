@@ -6,7 +6,9 @@ Created on Mon Nov 11 18:33:32 2019
 """
 import pandas as pd
 
-def merge_data(btc_price_data, tnx, wallets):      
+def merge_data(btc_price_data, tnx, wallets):
+    """Merges transactions, price and wallets together"""
+      
     wallets = wallets.dropna()
     wallets = wallets.drop_duplicates(subset='address')
     
@@ -35,6 +37,10 @@ def merge_data(btc_price_data, tnx, wallets):
 
 
 def filter_data(data, filter_type, value, year_start=2013, year_end=2020):
+    """Filters transactions for percent merketcap or dollar value and optional 
+    for start and end year
+    """
+    
     pd.to_numeric(data['percent_marketcap'])
     
     if filter_type == 'dollar':
@@ -50,6 +56,7 @@ def filter_data(data, filter_type, value, year_start=2013, year_end=2020):
 
 
 def get_unknown_wallets(df):
+    """Returns a list of known and unknown wallets"""
     #get addresses that have no label
     sender = df[['sender', 'sender_name']]
     sender.rename(columns = {"sender" : 'address'}, inplace = True) 
@@ -63,15 +70,14 @@ def get_unknown_wallets(df):
     
     missing_labels = sender_unknown.append(receiver_unknown)
     missing_labels = missing_labels[['address']].drop_duplicates()  
-    #missing_labels = missing_labels.drop_duplicates()  
     
     known_labels = sender_known.append(receiver_known)
     known_labels = known_labels[['address']].drop_duplicates()  
-    #known_labels = known_labels.drop_duplicates()   
     return missing_labels, known_labels
 
 
 def add_new_wallets(wallets, labeled_wallets):
+    """Adds new wallets to the current list of wallets and removes duplicate"""
     wallet_owners = wallets[['owner', 'category']].drop_duplicates(subset='owner', keep='last').reset_index(drop=True)
     btc_wallets_new = pd.merge(wallet_owners, labeled_wallets[['address', 'owner']], on='owner', how='inner')
     btc_wallets_new = wallets.append(btc_wallets_new).drop_duplicates(subset='address', keep='first')

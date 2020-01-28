@@ -60,7 +60,6 @@ for category in category_list:
 # =============================================================================
 # Remove Mixer from categories
 # =============================================================================
-    
     df2 = data[data['category'] == category]
     df2 = df2.rename(columns={'category': 'category_orig'})
     address = df2['address']

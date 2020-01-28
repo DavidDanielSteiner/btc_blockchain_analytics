@@ -5,35 +5,20 @@ Created on Tue Dec 17 15:04:53 2019
 @author: David
 """
 
-#Random Forest
-#https://stackabuse.com/random-forest-algorithm-with-python-and-scikit-learn/
-#https://towardsdatascience.com/hyperparameter-tuning-the-random-forest-in-python-using-scikit-learn-28d2aa77dd74
-
-#GridSearch
-#https://mlfromscratch.com/gridsearch-keras-sklearn/#/
-
-#Label Encoder
-#le = labelencoder.fit_transform(labels)  #https://stackoverflow.com/questions/56266011/how-to-go-back-from-one-hot-encoded-labels-to-single-column-using-sklearn
-#tmp = labelencoder.inverse_transform(y_test)
-
-#Pandas
-#https://stackoverflow.com/questions/17071871/how-to-select-rows-from-a-dataframe-based-on-column-values
-
 import numpy as np
 import pandas as pd
 import xgboost as xgb
 import lightgbm as lgb
 from sklearn.linear_model import LogisticRegression
-from sklearn.model_selection import GridSearchCV, RandomizedSearchCV, train_test_split
+from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import classification_report, plot_confusion_matrix
+from sklearn.metrics import classification_report
 
 from classification_pipeline import algorithm_pipeline
 
 # =============================================================================
 # Load dataset
 # =============================================================================
-#data = pd.read_csv("../data/features_all_categories.csv")
 data = pd.read_csv("../data/features_trainingset_all_categories.csv")
 df = data.fillna(0)
 data = data[['address', 'category'
@@ -61,11 +46,7 @@ y = df['category']
 
 
 '''
-#Scaling
-from sklearn.preprocessing import StandardScaler
-scaler = StandardScaler().fit(X)
-X = scaler.transform(X)
-# random oversampling all data
+#random oversampling
 from imblearn.over_sampling import SMOTE
 sm = SMOTE(sampling_strategy='auto')
 X, y = sm.fit_resample(X, y)
@@ -134,7 +115,7 @@ model, pred = algorithm_pipeline(X_train, X_test, y_train, y_test, model,
 
 # =============================================================================
 # LightGBM
-# Accuracy 0.844
+# Accuracy 0.85
 #param_grid = {'subsample_freq': [20], 'subsample': [0.7], 'reg_lambda': [1.1], 'reg_alpha': [1.2], 'num_leaves': [300], 'n_estimators': [1000], 'min_split_gain': [0.3], 'max_depth': [20], 'colsample_bytree': [0.9]}
 # =============================================================================
 model = lgb.LGBMClassifier()
@@ -156,10 +137,10 @@ param_grid = {
 
 model, pred = algorithm_pipeline(X_train, X_test, y_train, y_test, model, 
                                  param_grid, cv=10, scoring_fit='accuracy',
-                                 search_mode = 'RandomizedSearchCV', n_iterations = 30,
+                                 search_mode = 'GridSearchCV', n_iterations = 1,
                                  labels=labels)
 
-#importances = model.best_estimator_.feature_importances_
+#Feature Importance
 feature_importances = pd.DataFrame(model.best_estimator_.feature_importances_,
                                    index = X_train.columns,
                                    columns=['importance']).sort_values('importance', ascending=False)
@@ -186,16 +167,16 @@ print("Baseline: %.2f%% (%.2f%%)" % (results.mean()*100, results.std()*100))
 '''
 
 # =============================================================================
-# Neural Network v2
+# Neural Network 
 # =============================================================================
 from keras.models import Sequential
-from keras.layers import Dense
+from keras.layers import Dense, Dropout
 from keras.wrappers.scikit_learn import KerasClassifier
 from keras.utils import np_utils
 from sklearn.model_selection import cross_val_score
 from sklearn.model_selection import KFold
 from sklearn.preprocessing import LabelEncoder
-from sklearn.pipeline import Pipeline
+
 
 #feature and target split
 X = df.loc[:, df.columns != 'category']
@@ -214,9 +195,6 @@ y = encoder.fit_transform(y)
 #test, train split
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-
-from keras.models import Sequential
-from keras.layers import Dense, Dropout
 
 # Initialize the constructor
 model = Sequential()
@@ -269,7 +247,6 @@ from sklearn.externals import joblib
 
 filename = 'GBM.sav'
 joblib.dump(model, '../models/' + filename)
-
 
 
 # =============================================================================

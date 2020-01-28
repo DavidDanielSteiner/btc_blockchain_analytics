@@ -30,7 +30,13 @@ proxies_used = []
 categories_names = ['Exchange', 'Pools', 'Services', 'Gambling', 'Historic']
 
 
-def scrape_owner(owner, category_name, proxy):        
+def scrape_owner(owner, category_name, proxy):
+    """Function that scrapes addresses and the corresponding entity from
+    walletexplorer.com
+    Usage of proxies and threading for annonymous scraping in parallel.
+    Saves the scraped addresses in an sql database.
+    """        
+    
     url_pages = "https://www.walletexplorer.com/wallet/" + owner
     res, proxy = get_response(proxy, url_pages)
     res = requests.get(url_pages) 
@@ -71,6 +77,9 @@ def scrape_owner(owner, category_name, proxy):
 # =============================================================================
 
 def get_proxies():
+    """Scrapes a list of proxies from free-proxy-list.net
+    """
+    
     url = 'https://free-proxy-list.net/'
     response = requests.get(url)
     parser = fromstring(response.text)
@@ -84,6 +93,9 @@ def get_proxies():
     
 
 def find_working_proxy(url):
+    """Helper function that returns a proxie that is working for 
+    walletexplorer.com
+    """
     proxies = get_proxies()
     proxy_pool = cycle(proxies)   
     found_proxy = False   
@@ -103,6 +115,8 @@ def find_working_proxy(url):
 
 
 def get_response(proxy, url):
+    """Helper function that checks if the proxies is working for specified url
+    """   
     found_proxy = False
     while found_proxy == False:    
         try:                   
@@ -117,7 +131,6 @@ def get_response(proxy, url):
 # =============================================================================
 # START    
 # =============================================================================
-     
 print('Searching for connection. Please wait')   
 url = "https://www.walletexplorer.com/"
 res, proxy = find_working_proxy(url)

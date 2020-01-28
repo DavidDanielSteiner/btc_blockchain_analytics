@@ -16,22 +16,19 @@ from torrequest import TorRequest #for windows https://github.com/erdiaker/torre
 
 # =============================================================================
 # Scraper
-# =============================================================================
-            
+# =============================================================================      
 address_df = pd.read_csv("data/unkown_wallets.csv", index_col=False)
-#address_1 =address_1.append(address_2)
-#common = address_df.merge(address_1,on=['address'])
-#address_df = address_df[(~address_df.address.isin(common.address))]
 
 address_list = np.array_split(address_df, 50)
 wallet_list = []
 proxy_list = []
 
 def scrape_owner(df): 
+    """Function that scrapes addresses and the corresponding entity from
+    bitinfocharts.com.
+    Usage of tor requests and threading for annonymous scraping in parallel
+    """
     with TorRequest(proxy_port=9050, ctrl_port=9051, password=None) as tr:              
-        resp = tr.get('https://bitinfocharts.com/')
-        #print(resp.text)
-        
         resp = tr.get('http://ipecho.net/plain')
         proxy = resp.text
         print(proxy)
@@ -55,17 +52,15 @@ def scrape_owner(df):
             except:
                 print("Error:", url, sep=" ")
                 time.sleep(random.uniform(1,10))
-            
+                
     print(">>>finished<<<")
             
-
+    
 for counter, df in enumerate(address_list):   
     print("--THREAD " + str(counter) + " STARTED")  
     thread_scrape_owner = threading.Thread(target=scrape_owner, args=(df,))
     thread_scrape_owner.start()      
-    time.sleep(random.uniform(2, 8))
-
-
+    time.sleep(random.uniform(1,5))
 
 # =============================================================================
 # Export to csv
@@ -75,6 +70,9 @@ wallets['category'] = 'Exchange'
 wallets.to_csv('wallets_bitinfocharts_with_numbers.csv', index = False)
 
 def remove_digits(address): 
+    """Helper function to separate addresses with real entity names from unknown
+    entities consisting only of numbers
+    """
     numbers = sum(c.isdigit() for c in address)
     if numbers <= 2:
         return address.strip()

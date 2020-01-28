@@ -19,7 +19,7 @@ import numpy as np
 
 #Bitinfocharts.com 
 #--> scraper_bitinfocharts.py (top 10.000 BTC adresses)
-#--> scraper_bitinfocharts_2_tor.py (scrape specific addresses one by one. TOR Browser neccessary)
+#--> scraper_bitinfocharts_tor.py (scrape specific addresses one by one. TOR Browser neccessary)
 
 #Cryptoground
 #--> Scrape specific addresses for Mt.Gox Exchange
@@ -35,7 +35,7 @@ import numpy as np
 # =============================================================================
 # Get all transactions over a specific value of btc
 # =============================================================================
-from bigquery_BTC_node import get_all_tx_over_value
+from bigquery_btc_node import get_all_tx_over_value
 
 btc=100
 large_tx = get_all_tx_over_value(btc)
@@ -45,7 +45,7 @@ large_tx.to_csv("transactions_" + str(btc) +"BTC.csv", index=False)
 # Get complete transaction history for samples of addresses per category
 # !GOOGLE DEVELOPER CREDENTIALS NECCESSARY!
 # =============================================================================
-from bigquery_BTC_node import get_all_tx_from_address
+from bigquery_btc_node import get_all_tx_from_address
 
 df = pd.read_csv("../data/btc_wallets.csv")
 
@@ -70,12 +70,8 @@ for address_list, category_name in zip(category_list, category_names):
 # Addresses will be processed in bulk for memory issues
 # !GOOGLE DEVELOPER CREDENTIALS NECCESSARY!
 # =============================================================================
-address_df = pd.read_csv("../data/final_dataset/addresses_unknown_0.01_marketcap_2015.csv")
-#df2 = pd.read_csv("../data/addresses_unknown.csv")
-#common = pd.merge(address_df, df2,on=['address'])
-#df = df2[(~df2.address.isin(common.address))]
+address_df = pd.read_csv("../data/addresses_unknown.csv")
 
-address_list= df
 df_split = np.array_split(df, 10)
 
 i=0

@@ -8,7 +8,7 @@ Created on Thu Dec 5 12:19:36 2019
 import pandas as pd
 
 # =============================================================================
-# Data Sources
+# Load Data Sources
 # address, owner, category
 # =============================================================================
 wallets = pd.DataFrame()
@@ -32,9 +32,6 @@ wallets = wallets.drop_duplicates(subset='address')
 # =============================================================================
 # Recategorize specific categories
 # =============================================================================
-#owner = wallets.drop_duplicates(subset='owner')
-#category = wallets.drop_duplicates(subset='category')
-
 wallets.loc[wallets.owner == 'MiddleEarthMarketplace', 'category'] = 'Service'
 wallets.loc[wallets.owner == 'AbraxasMarket', 'category'] = 'Service'
 wallets.loc[wallets.owner == 'PandoraOpenMarket', 'category'] = 'Service'
@@ -107,8 +104,6 @@ wallets.loc[wallets.owner == 'HaoBTC.com', 'category'] = 'Exchange'
 wallets.loc[wallets.owner == 'Xapo.com', 'category'] = 'Exchange'
 wallets.loc[wallets.category == 'Pools', 'category'] = 'Mining'
 wallets.loc[wallets.category == 'Services', 'category'] = 'Service'
-
-#
 wallets.loc[wallets.owner == 'Xapo.com-2', 'owner'] = 'Xapo.com'
 wallets.loc[wallets.owner == 'BTCC.com-old2', 'owner'] = 'BTCC.com'
 wallets.loc[wallets.owner == 'BTCC.com-old', 'owner'] = 'BTCC.com'
@@ -131,7 +126,7 @@ wallets = wallets[wallets['category'] != 'Historic']
 
 
 # =============================================================================
-# Export data to CSV and DB
+# Export data to CSV
 # =============================================================================
 wallet_owners = pd.DataFrame()
 wallet_owners = wallets.groupby(['owner', 'category']).agg(['count'], as_index=False).reset_index()

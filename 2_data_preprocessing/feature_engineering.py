@@ -12,6 +12,8 @@ import requests
 import io
 
 def feature_engineering(df):
+    """Aggregates all transactions per address and computes new features"""
+    
     df = df.sort_values('block_number')    
     df = df.reset_index(drop=True)        
     
@@ -45,12 +47,7 @@ def feature_engineering(df):
     df['n_outputs'] = len(outputs)
     df['p_inputs'] = len(inputs) / df['n_tx']
     
-    #coinbase
-    #df.loc[df.is_coinbase == 'False', 'is_coinbase'] = 0
-    #df.loc[df.is_coinbase == 'True', 'is_coinbase'] = 1
-    
     #transaction value usd category count 
-    #usd_per_tx = df[['hash', 'value_usd']].groupby('hash').agg({'value_usd':'sum'})
     df['p_0k'] = len(tx[tx['value_usd'] <= 100]) / df['n_tx']
     df['p_1k'] = len(tx[(tx['value_usd'] >= 100) & (tx['value_usd'] < 1000)]) / df['n_tx']
     df['p_10k'] = len(tx[(tx['value_usd'] >= 1000) & (tx['value_usd'] < 10000)]) / df['n_tx']
@@ -136,10 +133,7 @@ def feature_engineering(df):
     df['std_value_percent_marketcap'] = df['value_percent_marketcap'].std()
     df['mean_tx_value_percent_marketcap'] = df['tx_value_percent_marketcap'].mean()
     df['std_tx_value_percent_marketcap'] = df['tx_value_percent_marketcap'].std()
-             
-    #moments
-    
-    
+              
     #drop unneccessary columns
     final = df.drop(['block_number', 'block_timestamp', 'value_btc', 'hash',
            'input_count', 'output_count', 'tx_value_btc',
@@ -157,6 +151,7 @@ lock = threading.Lock()
 
 
 def handle_threads(list_address, counter):
+    """Helper Function to handle multiple threads"""
     df_features_local = pd.DataFrame()  
     global all_tnx
     
@@ -175,6 +170,9 @@ def handle_threads(list_address, counter):
 
 
 def get_features(tx, n_threads = 100):
+    """Helper Function to prepare for feature engineering.
+    Gets a specified number of threads and preprocesses the data"""
+    
     global df_features
     df_features = df_features[0:0]
     
@@ -202,8 +200,7 @@ def get_features(tx, n_threads = 100):
     print('Rows: ', len(addresses), sep=" ")
     addresses_list = np.array_split(addresses, n_threads)
     
-    threads = []
-    
+    threads = []  
     for counter, list_address in enumerate(addresses_list):   
         counter += 1
         thread = threading.Thread(target=handle_threads, args=(list_address, counter))
@@ -216,8 +213,7 @@ def get_features(tx, n_threads = 100):
     for thread in threads:
         thread.join()
     
-    print('All Threads finished')
-    #global df_features       
+    print('All Threads finished')     
     print("Total rows", len(df_features), sep=" ")
     
     return df_features
