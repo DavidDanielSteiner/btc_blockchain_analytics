@@ -87,7 +87,17 @@ x = known.drop_duplicates()
 
 x = data.drop_duplicates(subset='address')
 
-wallets = pd.read_csv("../data/btc_wallets_new.csv")
+t1 = pd.read_csv("../data/address_known_chunk_1.csv")
+t2 = pd.read_csv("../data/address_known_chunk_2.csv")
+t3 = pd.read_csv("../data/address_known_chunk_3.csv")
+t4 = pd.read_csv("../data/address_known_chunk_4.csv")
+
+x = t1.append(t2)
+x = x.append(t3)
+x = x.append(t4)
+x.to_csv("addresses_known.csv", index=False) 
+
+
 known = pd.read_csv("../data/features_known.csv")
 
 known_features = pd.merge(wallets, known, on='address')
