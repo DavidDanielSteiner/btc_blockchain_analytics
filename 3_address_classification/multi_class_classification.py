@@ -19,7 +19,7 @@ from classification_pipeline import algorithm_pipeline
 # =============================================================================
 # Load dataset
 # =============================================================================
-data = pd.read_csv("../data/features_trainingset_all_categories.csv")
+data = pd.read_csv("features_trainingset_all_categories.csv")
 df = data.fillna(0)
 data = data[['address', 'category'
 ,'lifetime', 'n_tx', 'n_inputs', 'n_outputs', 'p_inputs', 'mean_inputs', 'mean_outputs', 'p_payback', 'std_inputs', 'std_outputs', 'tx_per_day'
@@ -96,6 +96,7 @@ model, pred = algorithm_pipeline(X_train, X_test, y_train, y_test, model,
 # =============================================================================
 # XBGBoost Regression
 # Accuracy 0.844
+# param_grid: {'subsample': 0.9, 'reg_lambda': 1.3, 'reg_alpha': 1.2, 'n_estimators': 400, 'max_depth': 15, 'colsample_bytree': 0.8}
 # =============================================================================
 model = xgb.XGBClassifier()
 param_grid = {
@@ -109,13 +110,13 @@ param_grid = {
 
 model, pred = algorithm_pipeline(X_train, X_test, y_train, y_test, model, 
                                  param_grid, cv=10, scoring_fit='accuracy',
-                                 search_mode = 'RandomizedSearchCV', n_iterations = 5,
+                                 search_mode = 'RandomizedSearchCV', n_iterations = 1,
                                  labels=labels)
 
 
 # =============================================================================
 # LightGBM
-# Accuracy 0.85
+# Accuracy 0.856
 #param_grid = {'subsample_freq': [20], 'subsample': [0.7], 'reg_lambda': [1.1], 'reg_alpha': [1.2], 'num_leaves': [300], 'n_estimators': [1000], 'min_split_gain': [0.3], 'max_depth': [20], 'colsample_bytree': [0.9]}
 # =============================================================================
 model = lgb.LGBMClassifier()
@@ -168,6 +169,7 @@ print("Baseline: %.2f%% (%.2f%%)" % (results.mean()*100, results.std()*100))
 
 # =============================================================================
 # Neural Network 
+# Accuracy: 83.53
 # =============================================================================
 from keras.models import Sequential
 from keras.layers import Dense, Dropout
