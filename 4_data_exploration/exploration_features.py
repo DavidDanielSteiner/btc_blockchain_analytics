@@ -7,12 +7,37 @@ Created on Thu Jan 23 19:34:11 2020
 
 import pandas as pd
 import seaborn as sns
+import matplotlib.pyplot as plt
 
-data = pd.read_csv("../data/features_trainingset_all_categories_cleaned.csv")
+data = pd.read_csv("../data/features_trainingset_all_categories.csv")
+
+data = pd.read_csv("../data/transactions_100BTC.csv", nrows=10000)
 
 feature_importances.T.to_dict(orient='list')
 
-sns.catplot(x="category", y="mean_inputs", kind="box", data=data, showfliers=False)
+data = pd.read_csv("../data/final_dataset/transactions_0.01_marketcap_2015-2020.csv")
+
+d = data[['dollar', 'block_timestamp']]
+max_v = data['dollar'].max()
+min_v = data['dollar'].min()
+
+fig, ax = plt.subplots()
+graph = sns.countplot(x='category', data=wallets_known, color="black")
+
+
+sns.catplot(x="category", y="mean_inputs", kind="box", data=data, showfliers=False, color="white")
+plt.title('Mean number of inputs per category')
+plt.savefig('features_mean_number_inputs.png', transparent=True)
+
+sns.catplot(x="category", y="input_mean_tx_value_btc", kind="box", data=data, showfliers=False, color="white")
+plt.title('Mean transaction value (btc) per category')
+plt.savefig('features_mean_transaction_value.png', transparent=True)
+
+sns.catplot(x="category", y="input_p_adr_tx_value_usd", kind="box", data=data, showfliers=False, color="white")
+plt.title('Percent of input address value to transaction value per category')
+plt.savefig('features_percent_address_inputs.png', transparent=True)
+
+
 sns.catplot(x="category", y="input_mean_tx_value_btc", kind="box", data=data, showfliers=False)
 sns.catplot(x="category", y="input_p_adr_tx_value_usd", kind="box", data=data, showfliers=False) #ratio of adr value to tx value
 sns.catplot(x="category", y="outputs_p_adr_tx_value_usd", kind="box", data=data, showfliers=False)
