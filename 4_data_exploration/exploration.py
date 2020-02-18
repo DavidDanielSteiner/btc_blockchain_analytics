@@ -16,8 +16,8 @@ import io
 # LABELS / WALLETS
 # =============================================================================
 
-wallets_all = pd.read_csv("data/btc_wallets_new.csv", index_col=False)
-wallets_predicted = pd.read_csv("data/btc_wallets_predicted.csv", index_col=False)
+wallets_all = pd.read_csv("data/final_dataset_v2/btc_wallets_new.csv", index_col=False)
+wallets_predicted = pd.read_csv("data/final_dataset/btc_wallets_predicted.csv", index_col=False)
 
 wallets = wallets_all.append(wallets_predicted)
 wallets = wallets.drop_duplicates(subset='address', keep='first')
@@ -68,7 +68,7 @@ def merge_tnx_wallets(tnx, wallets):
  
     return tnx
 
-tnx = pd.read_csv("../data/tmp/transactions_0.01_marketcap_2015-2020.csv", index_col=False) #1019673
+tnx = pd.read_csv("../data/final_dataset_v2/transactions_0.01_marketcap_2015-2020.csv", index_col=False) #1019673
 
 #Preprocessing
 tnx["btc"] = tnx["btc"].astype(int)
@@ -94,6 +94,7 @@ tnx = tnx.groupby(['hash'], as_index=False).first()
 tmp = tnx[tnx.groupby('hash')['sender'].transform('size') == 1]
 self_transactions = tmp[tmp['sender'] == tmp['receiver']] #43484 self transactions
 
+"""
 sns.countplot(x='receiver_category', data=self_transactions) 
 sns.countplot(y='receiver_name', data=self_transactions, order= self_transactions['receiver_name'].value_counts(ascending=False).index) 
 sns.boxplot(x=self_transactions["dollar"], y=self_transactions["receiver_name"], showfliers=False, order = self_transactions.groupby("receiver_name")["dollar"].median().fillna(0).sort_values()[::-1].index) 
@@ -106,13 +107,14 @@ ax = sns.scatterplot(x="block_timestamp", y="dollar",
                       hue="receiver_category", size="btc",
                       palette="Set2",
                       data=self_transactions)
-
+"""
 
 '''grouped transactions without self transactions'''
 tnx_all = tnx.groupby(['hash'], as_index=False).first()
-tnx = pd.concat([tnx_all, self_transactions]).drop_duplicates(keep=False)
+tnx = pd.concat([tnx_all, self_transactions]).drop_duplicates(keep=False) #116274 transactions
 
-
+#Unknown: 133.000
+#Known: 303.000
 
 
 # =============================================================================
@@ -278,7 +280,7 @@ ax = sns.scatterplot(x="block_timestamp", y="dollar",
 # =============================================================================
 '''categorize by transactions type'''
 
-date_start = '2018-01-01'
+date_start = '2017-01-01'
 date_end = '2020-01-01'
 all_days = pd.date_range(date_start, date_end, freq='D')
 
@@ -473,6 +475,7 @@ df = df.append(analytics(exchange_other, price))
 df = df.append(analytics(exchange_exchange, price))
 df = df.append(analytics(other_other, price))
 
+df.to_excel("final_metrics.xlsx")
 
 
 # =============================================================================
