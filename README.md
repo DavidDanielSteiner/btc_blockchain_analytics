@@ -18,7 +18,7 @@ Keywords:          "Bitcoin, Blockchain, Transactions, Wallets, Addresses, Price
 
 
 
-Author:            David Steiner, Minh Nguyen
+Author:            David Steiner
 
 
 
